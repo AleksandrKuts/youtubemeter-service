@@ -1,4 +1,4 @@
-# youtubemeter-service
+# The program for the analysis of the channels youtube
 
 Usage:
 ```
