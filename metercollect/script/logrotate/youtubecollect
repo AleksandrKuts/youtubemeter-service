@@ -1,0 +1,11 @@
+/home/youtubemetric/collect/log/*.log {
+    rotate 10
+    size=10M
+    missingok
+    notifempty
+    sharedscripts
+    copytruncate
+    nomail
+    postrotate
+    endscript
+}

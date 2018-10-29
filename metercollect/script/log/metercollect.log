@@ -1,0 +1,1 @@
+22-10-2018 13:24:01	FATAL	database/database.go:65	error ping database: dial tcp 127.0.0.1:5432: connect: connection refused
