@@ -15,8 +15,8 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/youtube/v3"
 
-	"github.com/AleksandrKuts/go/youtubemeter/metercollect/config"
-	"github.com/AleksandrKuts/go/youtubemeter/metercollect/server/database"
+	"github.com/AleksandrKuts/youtumemeter-service/collector/config"
+	"github.com/AleksandrKuts/youtumemeter-service/collector/server/database"
 )
 
 const LAYOUT_ISO_8601 = "2006-01-02T15:04:05Z"

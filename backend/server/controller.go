@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
-	"github.com/AleksandrKuts/go/youtubemeter/meterbackend/config"
+	"github.com/AleksandrKuts/youtumemeter-service/backend/config"
 	"io/ioutil"
 	"net/http"
 	"os"

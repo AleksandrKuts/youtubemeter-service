@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/AleksandrKuts/go/youtubemeter/metercollect/config"
+	"github.com/AleksandrKuts/youtumemeter-service/backend/config"
 	"go.uber.org/zap"
 )
 
