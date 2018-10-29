@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"github.com/gorilla/mux"
 	"github.com/AleksandrKuts/youtumemeter-service/backend/config"
+	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -19,7 +19,6 @@ const MAX_PORT = 1<<16 - 1 // 65535
 
 const CONTENT_TYPE_KEY = "Content-Type"
 const CONTENT_TYPE_VALUE = "application/json"
-
 
 func init() {
 	log = config.Logger
@@ -80,6 +79,7 @@ func newRouter() *mux.Router {
 
 	if *config.ListenAdmin {
 		routeAdminPlaylist := r.PathPrefix("/playlists/admin").Subrouter()
+		routeAdminPlaylist.Methods("GET").HandlerFunc(getPlaylistsHandlerAdmin)
 		routeAdminPlaylist.Methods("OPTIONS", "POST").HandlerFunc(appendPlaylistHandler)
 		routeAdminPlaylist.Path("/{id}").Methods("OPTIONS", "PUT").HandlerFunc(updatePlaylistHandler)
 		routeAdminPlaylist.Path("/{id}").Methods("OPTIONS", "DELETE").HandlerFunc(deletePlaylistHandler)
@@ -130,7 +130,7 @@ func handlerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		method := r.Method
 		origin := r.Header.Get("Origin")
-		log.Infof("method: %v, uri: %v, add: =%v, origin: %v", method, r.RequestURI, r.RemoteAddr, origin )
+		log.Infof("method: %v, uri: %v, add: %v, origin: [%v], host: %v", method, r.RequestURI, r.RemoteAddr, origin, r.Host)
 
 		if origin == *config.Origin {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
@@ -144,8 +144,9 @@ func handlerMiddleware(next http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 			}
 		} else {
+			log.Errorf("origin is not: [%v] ", *config.Origin)
 			http.Error(w, "Access denied", http.StatusForbidden)
-			return			
+			return
 		}
 
 	})
@@ -188,7 +189,7 @@ func appendPlaylistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-//	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
+	//	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
 	w.WriteHeader(http.StatusOK)
 
 	log.Warnf("appended playlist=%v", playlist)
@@ -202,7 +203,6 @@ func updatePlaylistHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	req := q.Get("req")
 	log.Debugf("req=%v(%v)", req, formatStringDate(req))
-
 
 	var playlist PlayList
 	err := parseBody(r, &playlist)
@@ -219,7 +219,7 @@ func updatePlaylistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-//	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
+	//	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
 	w.WriteHeader(http.StatusOK)
 	log.Infof("updated playlist=%v", playlist)
 }
@@ -241,7 +241,7 @@ func deletePlaylistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-//	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
+	//	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
 	w.WriteHeader(http.StatusOK)
 	log.Infof("deleted playlist with id=%v", id)
 }
@@ -257,30 +257,43 @@ func formatStringDate(sdt string) string {
 
 // Оброблювач запиту на отримання всіх активних плей-листів
 func getPlaylistsHandler(w http.ResponseWriter, r *http.Request) {
-	if *config.ListenAdmin {
-		q := r.URL.Query()
-		req := q.Get("req")
-		enable := q.Get("enable")
+	q := r.URL.Query()
+	req := q.Get("req")
+	enable := q.Get("enable")
+	log.Debugf("req=%v(%v), active=%v", req, formatStringDate(req), enable)
 
-		log.Debugf("req=%v(%v), active=%v", req, formatStringDate(req), enable)
+	playlistJson, err := getPlaylists(true)
 
-		playlistJson, err := getPlaylists(enable)
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
-//		w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(playlistJson)))
-		
-		w.WriteHeader(http.StatusOK)
-		w.Write(playlistJson)
-
-	} else {
-		http.Error(w, "Administration service disabled", http.StatusForbidden)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
+	//		w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(playlistJson)))
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(playlistJson)
+}
+
+// Оброблювач запиту на отримання всіх плей-листів для для адміністрування
+func getPlaylistsHandlerAdmin(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	req := q.Get("req")
+	log.Debugf("req=%v(%v)", req, formatStringDate(req))
+
+	playlistJson, err := getPlaylists(false)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
+	//		w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(playlistJson)))
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(playlistJson)
 }
 
 // Оброблювач запиту на отриматння метрик по відео id за заданий період
@@ -302,8 +315,8 @@ func getMetricsByVideoIdHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
-//	w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(metricsVideoJson)))
-	
+	//	w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(metricsVideoJson)))
+
 	w.WriteHeader(http.StatusOK)
 	w.Write(metricsVideoJson)
 }
@@ -325,7 +338,7 @@ func getVideoByIdHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
-//	w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(vdeoJson)))
+	//	w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(vdeoJson)))
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(vdeoJson)
@@ -348,7 +361,7 @@ func getVideoByIdPlayListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
-//	w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(videosJson)))
+	//	w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(videosJson)))
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(videosJson)

@@ -14,6 +14,7 @@ var (
 	Timeout = flag.Duration("timeout", time.Second * 15, "the duration for which the server wait for existing connections to finish - e.g. 15s or 1m")
 	ListenAdmin = flag.Bool("ListenAdmin", false, "Activate the playlist administration service")
 	Origin = flag.String("Origin", "*", "Source from which the request to the service is allowed. Example: 0.0.0.0:4200")
+	MaxViewVideosInPlayLists = flag.Int("MaxViewVideosInPlayLists", 30, "The maximum number of videos to display in the playlist. Example: 30")
 
 	debugLevel = flag.String("debugLevel", "info", "debug level: debug, info, warn, error, dpanic, panic, fatal. Example: error")
 	DBHost = flag.String("dbhost", "localhost", "The database's host to connect to. Values that start with / are for unix")
@@ -90,6 +91,7 @@ func init() {
 	Logger.Infof("timeout=%s", *Timeout)
 	Logger.Infof("ListenAdmin=%v", *ListenAdmin)
 	Logger.Infof("Origin=%v", *Origin)
+	Logger.Infof("MaxViewVideosInPlayLists=%v", *MaxViewVideosInPlayLists)
 
 	Logger.Debugf("dbhost=%s", *DBHost)
 	Logger.Debugf("dbport=%s", *DBPort)	

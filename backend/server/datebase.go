@@ -18,13 +18,13 @@ const TIME_LAYOUT = "2006-01-02T15:04:05.999999-07:00"
 const INSERT_PLAYLIST = "INSERT INTO playlist ( id, title, enable, idch ) VALUES ( $1, $2, $3, $4)"
 const UPDATE_PLAYLIST = "UPDATE playlist SET title=$2, enable=$3, idch=$4 WHERE id = $1"
 const DELETE_PLAYLIST = "DELETE FROM playlist WHERE id = $1"
-const GET_PLAYLISTS = "SELECT pl.id, pl.title, pl.enable, pl.idch FROM playlist pl ORDER BY pl.title"
-const GET_PLAYLISTS_ENABLE = "SELECT id, title, enable,.idch FROM playlist ORDER BY title AND enable = true"
+const GET_PLAYLISTS = "SELECT id, title, enable, idch FROM playlist ORDER BY title"
+const GET_PLAYLISTS_ENABLE = "SELECT id, title, enable, idch FROM playlist WHERE enable = true ORDER BY title"
 const GET_METRICS_BY_IDVIDEO = "Select * FROM return_metrics($1)"
 const GET_METRICS_BY_IDVIDEO_BETWEEN_DATE = "Select * FROM return_metrics($1, $2, $3)"
 
 const GET_VIDEO_BY_ID = "SELECT * FROM return_video($1)"
-const GET_VIDEOS_BY_ID_PLAYLIST = "SELECT id, TRIM(title), publishedat FROM video WHERE idpl = $1 ORDER BY publishedat DESC"
+const GET_VIDEOS_BY_ID_PLAYLIST = "SELECT id, TRIM(title), publishedat FROM video WHERE idpl = $1 ORDER BY publishedat DESC LIMIT $2"
 
 const NOT_DATA = "NOT_DATA"
 
@@ -129,17 +129,16 @@ func deletePlayList(playlistId string) error {
 }
 
 // Отримати всі активні плей-листи, якщо плей-лист не активний його треба активувати через інтерфейс адміністратора
-func getPlaylists(enable string) ([]byte, error) {
+func getPlaylists(onlyEnable bool) ([]byte, error) {
 	log.Debugf("dbstats=%v", db.Stats())
 
 	var rows *sql.Rows
 	var err error
 
-
-	if enable == "" {
-		rows, err = db.Query(GET_PLAYLISTS)		
-	} else {
+	if onlyEnable {
 		rows, err = db.Query(GET_PLAYLISTS_ENABLE)		
+	} else {
+		rows, err = db.Query(GET_PLAYLISTS)		
 	}
 	
 	if err != nil {
@@ -328,7 +327,7 @@ func getVideosByPlayListId(id string) ([]byte, error) {
 		return nil, errors.New("video id is null")
 	}
 
-	rows, err := db.Query(GET_VIDEOS_BY_ID_PLAYLIST, id)
+	rows, err := db.Query(GET_VIDEOS_BY_ID_PLAYLIST, id, *config.MaxViewVideosInPlayLists)
 
 	if err != nil {
 		log.Errorf("Error get videos by plailist id: %v", err)
