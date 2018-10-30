@@ -26,7 +26,8 @@ $BODY$
   BEGIN
 	/* Отримуємо кількість записів які задовольняють запиту - це необхідно для подальших розрахунків, 
 	та ознаку останнього запису - його додаємо обов'язково */
-	SELECT COUNT(*), MIN(m.timemetric), MAX(m.timemetric) FROM metric m WHERE m.idvideo = _idv INTO _count_metrics, _min_timemetric, _max_timemetric;
+	SELECT COUNT(*), MIN(m.timemetric), MAX(m.timemetric) FROM metric m WHERE m.idvideo = _idv 
+		INTO _count_metrics, _min_timemetric, _max_timemetric;
 
 	/* Перевірка чи є дані по відео*/
 	IF _count_metrics = 0 THEN
