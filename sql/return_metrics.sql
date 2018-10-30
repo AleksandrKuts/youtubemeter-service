@@ -50,10 +50,6 @@ $BODY$
 			_indexes[i] := round(i * _step_index);
 		END LOOP;	
 
-		RAISE NOTICE '%', _count_metrics;
-		RAISE NOTICE '%', _step_index;
-		RAISE NOTICE '%', _indexes;
-
 		RETURN QUERY
 		SELECT m.commentcount, m.likecount, m.dislikecount, m.viewcount, m.timemetric from 
 		(
