@@ -43,10 +43,11 @@ $BODY$
 	/* Отримуємо кількість записів які задовольняють запиту - це необхідно для подальших розрахунків, 
 	та ознаку останнього запису - його додаємо обов'язково */
 	SELECT COUNT(*), MIN(m.timemetric), MAX(m.timemetric) 
-		FROM metric m 
-		WHERE m.idvideo = _idv 	AND m.timemetric >= _from::timestamp with time zone 	
-					AND m.timemetric <= _to::timestamp with time zone  
-		INTO _count_metrics, _min_timemetric, _max_timemetric;
+	  FROM metric m 
+	  WHERE m.idvideo = _idv 
+	    AND m.timemetric >= _from::timestamp with time zone 	
+	    AND m.timemetric <= _to::timestamp with time zone  
+	  INTO _count_metrics, _min_timemetric, _max_timemetric;
 
 	/* Перевірка чи є дані по відео*/
 	IF _count_metrics = 0 THEN
@@ -57,11 +58,11 @@ $BODY$
 	IF _MAX_RETURN_COUNT_ROWS > _count_metrics THEN
 		RETURN QUERY 
 		SELECT m.commentcount, m.likecount, m.dislikecount, m.viewcount, m.timemetric 
-		FROM  metric m
-		WHERE m.idvideo = _idv 
-			AND m.timemetric >= _from::timestamp with time zone 
-			AND m.timemetric <= _to::timestamp with time zone 
-		ORDER BY timemetric;
+		  FROM  metric m
+		  WHERE m.idvideo = _idv 
+		    AND m.timemetric >= _from::timestamp with time zone 
+		    AND m.timemetric <= _to::timestamp with time zone 
+		  ORDER BY timemetric;
 
 	/* Число записів більше максимально заданого, тому повертаємо точну кількість розподілену по інтервалу. 
 	Для цього використовуємо номери записів */
@@ -75,20 +76,21 @@ $BODY$
 
 		RETURN QUERY
 		SELECT m.commentcount, m.likecount, m.dislikecount, m.viewcount, m.timemetric from 
-		(
+		  (
 			/* Цей підзапит потрібен щоб додати колонку с номером запису для подальшої фільтрації */
-			Select ROW_NUMBER() OVER () as rnum, *
-			from metric s 
-			/* Вибираємо дані по відео id, даних буде більше чим максимально задано параметром: _MAX_RETURN_COUNT_ROWS */
-			WHERE s.idvideo = _idv 
-				AND s.timemetric >= _from::timestamp with time zone 
-				AND s.timemetric <= _to::timestamp with time zone ORDER BY s.timemetric
-		) m 
-		/* фільтруємо записи по їх номеру: додаємо тільки обрані номери записів та останній запис,
-		тепер записів буде не більше чим максимально задано параметром: _MAX_RETURN_COUNT_ROWS (плюс останній) */
-		WHERE m.rnum = 	ANY(_indexes) 
-				OR m.timemetric = _min_timemetric 
-				OR m.timemetric = _max_timemetric;
+			SELECT ROW_NUMBER() OVER () as rnum, *
+			  FROM metric s 
+			  /* Вибираємо дані по відео id, даних буде більше чим максимально задано параметром: _MAX_RETURN_COUNT_ROWS */
+			  WHERE s.idvideo = _idv 
+			    AND s.timemetric >= _from::timestamp with time zone 
+			    AND s.timemetric <= _to::timestamp with time zone 
+			  ORDER BY s.timemetric
+		  ) m 
+		  /* фільтруємо записи по їх номеру: додаємо тільки обрані номери записів та останній запис,
+		  тепер записів буде не більше чим максимально задано параметром: _MAX_RETURN_COUNT_ROWS (плюс останній) */
+		  WHERE m.rnum = ANY(_indexes) 
+		     OR m.timemetric = _min_timemetric 
+		     OR m.timemetric = _max_timemetric;
 
 	END IF;
       	
