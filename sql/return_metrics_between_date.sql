@@ -51,8 +51,6 @@ $BODY$
 		RAISE EXCEPTION 'There are no metrics for this video id: %', _idv USING HINT = 'Please check your video ID';
 	END IF;	
 
-	_step_index := _count_metrics::float / _MAX_RETURN_COUNT_ROWS;
-
 	/* Число записів менше максимально заданого, тому повертаємо всі */
 	IF _MAX_RETURN_COUNT_ROWS > _count_metrics THEN
 		RETURN QUERY SELECT m.commentcount, m.likecount, m.dislikecount, m.viewcount, m.timemetric from  metric m
@@ -63,6 +61,7 @@ $BODY$
 	Для цього використовуємо номери записів */
 	ELSE
 		/* Визначаємо номера записів які вибираються із загального інтервалу */
+		_step_index := _count_metrics::float / _MAX_RETURN_COUNT_ROWS;
 		FOR i IN 0.._MAX_RETURN_COUNT_ROWS - 1
 		LOOP
 			_indexes[i] := round(i * _step_index);
