@@ -3,8 +3,9 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"github.com/AleksandrKuts/youtumemeter-service/backend/config"
+	"github.com/AleksandrKuts/youtubemeter-service/backend/config"
 	"github.com/gorilla/mux"
+	"github.com/hashicorp/golang-lru"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/hashicorp/golang-lru"
 )
 
 const MIN_PORT = 1
@@ -21,13 +21,23 @@ const MAX_PORT = 1<<16 - 1 // 65535
 const CONTENT_TYPE_KEY = "Content-Type"
 const CONTENT_TYPE_VALUE = "application/json"
 
-var cache *lru.TwoQueueCache
+// Кеш для метрик
+var cacheMetrics *lru.TwoQueueCache
+
+// Кеш для відео
+var cacheVideo *lru.TwoQueueCache
 
 func init() {
 	log = config.Logger
-	
+
 	var err error
-	cache, err = lru.New2Q(8192)
+
+	cacheMetrics, err = lru.New2Q(*config.MaxSizeCacheMetrics)
+	if err != nil {
+		log.Fatalf("err: %v", err)
+	}
+
+	cacheVideo, err = lru.New2Q(*config.MaxSizeCacheVideo)
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
@@ -308,7 +318,12 @@ func getPlaylistsHandlerAdmin(w http.ResponseWriter, r *http.Request) {
 // Оброблювач запиту на отриматння метрик по відео id за заданий період
 func getMetricsByVideoIdHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+
 	id := vars["id"]
+	if id == "" {
+		http.Error(w, "video id is null", http.StatusInternalServerError)
+		return
+	}
 
 	q := r.URL.Query()
 	req := q.Get("req")
@@ -316,11 +331,38 @@ func getMetricsByVideoIdHandler(w http.ResponseWriter, r *http.Request) {
 	to := q.Get("to")
 	log.Debugf("req=%v(%v), id=%v, from=%v, to=%v", req, formatStringDate(req), id, from, to)
 
+	// Перевірка чи є дані в кеші. В кеші зберігаються тільки запроси за весь період
+	if from == "" && to == "" {
+		metricsi, ok := cacheMetrics.Get(id)
+
+		// Якщо дані в кеші є, то беремо їх тільки якщо з останнього запиту пройшло часу менш
+		// ніж період збору метрик, або якщо збір метрик вже припинився.
+		if ok {
+			metrics := metricsi.(MetricsInCache)
+			if time.Since(metrics.create) < *config.PeriodMeterCache ||
+				time.Since(metrics.publishedAt) > *config.PeriodCollectionCache {
+				log.Debug("get video from cache")
+
+				w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
+				w.WriteHeader(http.StatusOK)
+				w.Write(metrics.responce)
+
+				return
+			}
+		}
+	}
+
 	metricsVideoJson, err := getMetricsById(id, from, to)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Зберігаємо запит в кеші. В кеші зберігаються тільки запроси за весь період
+	if from == "" && to == "" {
+		cacheMetrics.Add(id, MetricsInCache{time.Now(), time.Now(), metricsVideoJson})
+		log.Debug("set video tos cache")
 	}
 
 	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)

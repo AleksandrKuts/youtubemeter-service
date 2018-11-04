@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	_ "github.com/lib/pq"
-	"github.com/AleksandrKuts/youtumemeter-service/backend/config"
+	"github.com/AleksandrKuts/youtubemeter-service/backend/config"
 	"strconv"
 	"strings"
 	"time"

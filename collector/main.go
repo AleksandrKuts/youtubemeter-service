@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/AleksandrKuts/youtumemeter-service/collector/server"
+	"github.com/AleksandrKuts/youtubemeter-service/collector/server"
 )
 
 func main() {

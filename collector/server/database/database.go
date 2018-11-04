@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/lib/pq"
-	"github.com/AleksandrKuts/youtumemeter-service/collector/config"
+	"github.com/AleksandrKuts/youtubemeter-service/collector/config"
 	"go.uber.org/zap"
 	"strings"
 	"time"

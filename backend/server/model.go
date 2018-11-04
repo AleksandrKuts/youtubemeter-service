@@ -67,8 +67,8 @@ type YoutubeVideoShort struct {
 	PublishedAt time.Time `json:"publishedat"`
 }
 
-type cacheVideo struct {
+type MetricsInCache struct {
 	create time.Time
 	publishedAt time.Time
-	responce string
+	responce []byte
 }

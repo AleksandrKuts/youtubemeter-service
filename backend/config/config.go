@@ -16,6 +16,12 @@ var (
 	Origin = flag.String("Origin", "*", "Source from which the request to the service is allowed. Example: 0.0.0.0:4200")
 	MaxViewVideosInPlayLists = flag.Int("MaxViewVideosInPlayLists", 30, "The maximum number of videos to display in the playlist. Example: 30")
 
+	PeriodMeterCache = flag.Duration("periodMetricCache", time.Second * 60, "the frequency of checking video meter - e.g. 60s or 1m")
+	PeriodCollectionCache = flag.Duration("periodCollectCache", time.Hour * 24 * 14, "the collection period video statistics from the date and time that the video was uploaded- e.g. 336h")
+
+	MaxSizeCacheVideo = flag.Int("MaxSizeCacheVideo", 1000, "The maximum size of videos cache. Example: 100")
+	MaxSizeCacheMetrics = flag.Int("MaxSizeCacheMetrics", 1000, "The maximum size of metrics cache. Example: 100")
+
 	debugLevel = flag.String("debugLevel", "info", "debug level: debug, info, warn, error, dpanic, panic, fatal. Example: error")
 	DBHost = flag.String("dbhost", "localhost", "The database's host to connect to. Values that start with / are for unix")
 	DBPort = flag.String("dbport", "5432", "The database's port to bind to")
@@ -92,6 +98,11 @@ func init() {
 	Logger.Infof("ListenAdmin=%v", *ListenAdmin)
 	Logger.Infof("Origin=%v", *Origin)
 	Logger.Infof("MaxViewVideosInPlayLists=%v", *MaxViewVideosInPlayLists)
+	Logger.Infof("PeriodMeter=%v", *PeriodMeterCache)
+	Logger.Infof("PeriodСollection=%v", *PeriodCollectionCache)
+
+	Logger.Infof("MaxSizeCacheVideo=%v", *MaxSizeCacheVideo)
+	Logger.Infof("MaxSizeCacheMetrics=%v", *MaxSizeCacheMetrics)
 
 	Logger.Debugf("dbhost=%s", *DBHost)
 	Logger.Debugf("dbport=%s", *DBPort)	
