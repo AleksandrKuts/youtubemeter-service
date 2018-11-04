@@ -217,7 +217,7 @@ func checkDate(sdt string) (string, error) {
 }
 
 // Отримати метрики по відео id за заданий період
-func getMetricsById(id string, from, to string) ([]byte, error) {
+func getMetricsByIdFromDB(id string, from, to string) (*[]Metrics, error) {
 	var rows *sql.Rows
 	var err error
 
@@ -249,7 +249,7 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 	}
 	defer rows.Close()
 
-	response := []Metrics{}
+	response := &[]Metrics{}
 
 	for rows.Next() {
 		var commentCount uint64
@@ -260,7 +260,7 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 
 		rows.Scan(&commentCount, &likeCount, &dislikeCount, &viewCount, &vTime)
 
-		response = append(response, Metrics{commentCount, likeCount, dislikeCount, viewCount, vTime})
+		*response = append(*response, Metrics{commentCount, likeCount, dislikeCount, viewCount, vTime})
 	}
 	err = rows.Err()
 	if err != nil {
@@ -268,20 +268,11 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 		return nil, err
 	}
 
-	stringJsonPlaylists, err := json.Marshal(response)
-
-	if err != nil {
-		log.Errorf("Error convert select to Metrics: response=%v, error=%v", response, err)
-		return nil, err
-	}
-
-	log.Debugf("Metrics=%v", string(stringJsonPlaylists))
-
-	return stringJsonPlaylists, nil
+	return response, nil
 }
 
 // Отримати опис відео по його id
-func getVideoById(id string) ([]byte, error) {
+func getVideoByIdFromDB(id string) ( *YoutubeVideo, error) {
 	if id == "" {
 		return nil, errors.New("video id is null")
 	}
@@ -296,28 +287,19 @@ func getVideoById(id string) ([]byte, error) {
 	var max_timemetric time.Time
 	var min_timemetric time.Time
 
-	var youtubeVideo YoutubeVideo;
-
 	err := db.QueryRow(GET_VIDEO_BY_ID, id).Scan(&idpl, &title, &description, &chtitle, &chid, &publishedat, &count_metrics, &max_timemetric, &min_timemetric)
 	if err != nil {
-		youtubeVideo = YoutubeVideo{NOT_DATA, NOT_DATA, NOT_DATA, NOT_DATA, NOT_DATA, time.Now(), 0, time.Now(), time.Now()}
-	} else {
-		youtubeVideo = YoutubeVideo{strings.TrimSpace(idpl), strings.TrimSpace(title), strings.TrimSpace(description), 
-			strings.TrimSpace(chtitle), strings.TrimSpace(chid), publishedat, count_metrics, max_timemetric, min_timemetric}
-	}
-
-	log.Debugf("idpl=%v, title=%v, description=%v, chtitle=%v, chid=%v, publishedat=%v, count_metrics=%v, max_timemetric=%v, min_timemetric=%v", idpl, title, description, chtitle, chid, publishedat, count_metrics, max_timemetric, min_timemetric)
-
-	stringJsonVideo, err := json.Marshal(youtubeVideo)
-
-	if err != nil {
-		log.Errorf("Error convert select to Metrics: response=%v, error=%v", youtubeVideo, err)
+//		youtubeVideo = &YoutubeVideo{NOT_DATA, NOT_DATA, NOT_DATA, NOT_DATA, NOT_DATA, time.Now(), 0, time.Now(), time.Now()}
+		log.Errorf("Error get videos by id: %v", err)
 		return nil, err
 	}
+	
+	youtubeVideo := &YoutubeVideo{strings.TrimSpace(idpl), strings.TrimSpace(title), strings.TrimSpace(description), 
+			strings.TrimSpace(chtitle), strings.TrimSpace(chid), publishedat, count_metrics, max_timemetric, min_timemetric}
+	
+	log.Debugf("idpl=%v, title=%v, description=%v, chtitle=%v, chid=%v, publishedat=%v, count_metrics=%v, max_timemetric=%v, min_timemetric=%v", idpl, title, description, chtitle, chid, publishedat, count_metrics, max_timemetric, min_timemetric)
 
-	log.Debugf("Video=%v", string(stringJsonVideo))
-
-	return stringJsonVideo, nil
+	return youtubeVideo, nil
 }
 
 // Отримати метрики по відео id за заданий період
