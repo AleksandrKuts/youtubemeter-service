@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/hashicorp/golang-lru"
 )
 
 const MIN_PORT = 1
@@ -20,8 +21,16 @@ const MAX_PORT = 1<<16 - 1 // 65535
 const CONTENT_TYPE_KEY = "Content-Type"
 const CONTENT_TYPE_VALUE = "application/json"
 
+var cache *lru.TwoQueueCache
+
 func init() {
 	log = config.Logger
+	
+	var err error
+	cache, err = lru.New2Q(8192)
+	if err != nil {
+		log.Fatalf("err: %v", err)
+	}
 }
 
 func Start() {

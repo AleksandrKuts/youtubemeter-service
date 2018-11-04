@@ -66,3 +66,9 @@ type YoutubeVideoShort struct {
 	// format.
 	PublishedAt time.Time `json:"publishedat"`
 }
+
+type cacheVideo struct {
+	create time.Time
+	publishedAt time.Time
+	responce string
+}
