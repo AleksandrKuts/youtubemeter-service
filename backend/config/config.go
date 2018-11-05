@@ -17,6 +17,8 @@ var (
 	Origin = flag.String("Origin", "*", "Source from which the request to the service is allowed. Example: 0.0.0.0:4200")
 	MaxViewVideosInPlayLists = flag.Int("MaxViewVideosInPlayLists", 30, "The maximum number of videos to display in the playlist. Example: 30")
 
+
+	EnableCache = flag.Bool("EnableCache", true, "Enable cache?")
 	PeriodMeterCache = flag.Duration("periodMetricCache", time.Second * 60, "the frequency of checking video meter - e.g. 60s or 1m")
 	PeriodCollectionCache = flag.Duration("periodCollectCache", time.Hour * 24 * 14, "the collection period video statistics from the date and time that the video was uploaded- e.g. 336h")
 
@@ -108,6 +110,7 @@ func init() {
 	Logger.Infof("PeriodMeter=%v", *PeriodMeterCache)
 	Logger.Infof("PeriodСollection=%v", *PeriodCollectionCache)
 
+	Logger.Infof("EnableCache=%v", *EnableCache)
 	Logger.Infof("MaxSizeCacheVideo=%v", *MaxSizeCacheVideo)
 	Logger.Infof("MaxSizeCacheMetrics=%v", *MaxSizeCacheMetrics)
 

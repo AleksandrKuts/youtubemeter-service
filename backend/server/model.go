@@ -67,22 +67,30 @@ type YoutubeVideoShort struct {
 	PublishedAt time.Time `json:"publishedat"`
 }
 
-//type MetricsInCache struct {
-//	create time.Time
-//	publishedAt time.Time
-//	responce []byte
-//}
-
+// Структура для кешу відео. 
 type VideoInCache struct {
-	updateMetrics time.Time
+	// Час останнього оновлення метрик. Данні за цей період не змінюються (максимум додасться одна метрика)
+	updateMetrics time.Time  
+
+	// Час останнього оновлення статистичних даних по відео (включає дані по метрикам див. YoutubeVideo struct). 
+	// Данні за цей період не змінюються (максимум додасться одна метрика)
+	updateVideo time.Time
+	
+	// Час додавання відео в плейлист. Поза періодом збору метрик, який рахується з даного часу дані вже не міняються
+	// тому беруться тільки з кешу
 	publishedAt time.Time
+	
+	// Дані по відео 
 	videoResponce []byte
+	
+	// Метрики
 	metricsResponce []byte
 }
 
 func (v *VideoInCache) updateCacheVideo(publishedAt time.Time, videoResponce []byte) {
-	v.videoResponce = videoResponce
+	v.updateVideo = time.Now()
 	v.publishedAt = publishedAt
+	v.videoResponce = videoResponce
 }
 
 func (v *VideoInCache) updateCacheMetrics(metricsResponce []byte) {
