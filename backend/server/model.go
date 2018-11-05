@@ -69,10 +69,12 @@ type YoutubeVideoShort struct {
 
 type MetricsInCache struct {
 	create time.Time
+	publishedAt time.Time
 	responce []byte
 }
 
 type VideoInCache struct {
+	create time.Time
 	publishedAt time.Time
 	responce []byte
 }

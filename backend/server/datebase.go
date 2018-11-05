@@ -217,17 +217,16 @@ func checkDate(sdt string) (string, error) {
 }
 
 // Отримати метрики по відео id за заданий період
-func getMetricsByIdFromDB(id string, from, to string) (*[]Metrics, error) {
+func getMetricsByIdFromDB(id string, from, to string) ([]*Metrics, error) {
 	var rows *sql.Rows
 	var err error
 
+	log.Debugf("id: %v, return_metrics from=%v, to=%v", id, from, to)
+
 	// якщо період не заданий обираємо всі дані
 	if from == "" && to == "" {
-		log.Debugf("return_metrics by, id=%v", id)
 		rows, err = db.Query(GET_METRICS_BY_IDVIDEO, id)
 	} else { // обраний період
-		log.Debugf("return_metrics by, id=%v from=%v, to=%v", id, from, to)
-
 		/* перевіряємо та форматуємо дату з якої вибираємо */
 		sFrom, err := checkDate(from)
 		if err != nil {
@@ -249,7 +248,7 @@ func getMetricsByIdFromDB(id string, from, to string) (*[]Metrics, error) {
 	}
 	defer rows.Close()
 
-	response := &[]Metrics{}
+	response := []*Metrics{}
 
 	for rows.Next() {
 		var commentCount uint64
@@ -260,7 +259,7 @@ func getMetricsByIdFromDB(id string, from, to string) (*[]Metrics, error) {
 
 		rows.Scan(&commentCount, &likeCount, &dislikeCount, &viewCount, &vTime)
 
-		*response = append(*response, Metrics{commentCount, likeCount, dislikeCount, viewCount, vTime})
+		response = append(response, &Metrics{commentCount, likeCount, dislikeCount, viewCount, vTime})
 	}
 	err = rows.Err()
 	if err != nil {
@@ -297,7 +296,8 @@ func getVideoByIdFromDB(id string) ( *YoutubeVideo, error) {
 	youtubeVideo := &YoutubeVideo{strings.TrimSpace(idpl), strings.TrimSpace(title), strings.TrimSpace(description), 
 			strings.TrimSpace(chtitle), strings.TrimSpace(chid), publishedat, count_metrics, max_timemetric, min_timemetric}
 	
-	log.Debugf("idpl=%v, title=%v, description=%v, chtitle=%v, chid=%v, publishedat=%v, count_metrics=%v, max_timemetric=%v, min_timemetric=%v", idpl, title, description, chtitle, chid, publishedat, count_metrics, max_timemetric, min_timemetric)
+	log.Debugf("id: %v, idpl=%v, title=%v, description=%v, chtitle=%v, chid=%v, publishedat=%v, count_metrics=%v, max_timemetric=%v, min_timemetric=%v", 
+			id, idpl, title, description, chtitle, chid, publishedat, count_metrics, max_timemetric, min_timemetric)
 
 	return youtubeVideo, nil
 }

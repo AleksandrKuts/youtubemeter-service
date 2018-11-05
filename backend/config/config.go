@@ -5,7 +5,9 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"time"
-	"github.com/vharitonsky/iniflags"	
+	"github.com/vharitonsky/iniflags"
+	"fmt"
+	"strings"	
 )
 
 var (
@@ -23,6 +25,9 @@ var (
 	MaxSizeCacheMetrics = flag.Int("MaxSizeCacheMetrics", 1000, "The maximum size of metrics cache. Example: 100")
 
 	debugLevel = flag.String("debugLevel", "info", "debug level: debug, info, warn, error, dpanic, panic, fatal. Example: error")
+	Log = flag.String("Log", "backend.log", "log files")
+	LogError = flag.String("LogError", "backend_error.log", "log files")
+
 	DBHost = flag.String("dbhost", "localhost", "The database's host to connect to. Values that start with / are for unix")
 	DBPort = flag.String("dbport", "5432", "The database's port to bind to")
 	DBName = flag.String("dbname", "basename", "The name of the database to connect to")
@@ -64,13 +69,12 @@ func init() {
 		atomicLevel = zapcore.InfoLevel
 	}
 
-
 	// Set loggin systems
 	cfg := zap.Config{
 		Encoding:         "console",
 		Level:            zap.NewAtomicLevelAt(atomicLevel),
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
+		OutputPaths:      strings.Split( *Log, ","),
+		ErrorOutputPaths: strings.Split( *Log, ","),
 		EncoderConfig: zapcore.EncoderConfig{
 			MessageKey: "message",
 
@@ -92,6 +96,8 @@ func init() {
 	Logger = logger.Sugar()
 
 	Logger.Warnf("debug level=%s", atomicLevel)
+	Logger.Warnf("Log=%s", Log)
+	Logger.Warnf("LogError=%s", LogError)
 	
 	Logger.Infof("addr=%s", *Addr)
 	Logger.Infof("timeout=%s", *Timeout)

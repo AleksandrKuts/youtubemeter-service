@@ -12,6 +12,9 @@ import (
 var (
 	// Get command options
 	debugLevel = flag.String("debugLevel", "info", "debug level: debug, info, warn, error, dpanic, panic, fatal. Example: -dlevel error")
+	Log = flag.String("Log", "backend.log", "log files")
+	LogError = flag.String("LogError", "backend_error.log", "log files")
+
 	FileSecret = flag.String("fileToken", "client_secret.json", "client secret file")
 	CredentialFile = flag.String("fileCredential", "yotubemetric_credential.json", "client credential file")
 	
@@ -70,8 +73,8 @@ func init() {
 	cfg := zap.Config{
 		Encoding:         "console",
 		Level:            zap.NewAtomicLevelAt(atomicLevel),
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
+		OutputPaths:      strings.Split( *Log, ","),
+		ErrorOutputPaths: strings.Split( *Log, ","),
 		EncoderConfig: zapcore.EncoderConfig{
 			MessageKey: "message",
 
@@ -93,6 +96,9 @@ func init() {
 	Logger = logger.Sugar()
 	
 	Logger.Warnf("debug level=%v", atomicLevel)
+	Logger.Warnf("Log=%s", Log)
+	Logger.Warnf("LogError=%s", LogError)
+
 	Logger.Infof("fileSecret=%v", *FileSecret)
 	Logger.Infof("timeout=%s", *Timeout)
 	

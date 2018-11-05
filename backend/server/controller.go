@@ -338,11 +338,9 @@ func getVideoByIdHandler(w http.ResponseWriter, r *http.Request) {
 
 	q := r.URL.Query()
 	req := q.Get("req")
-	log.Debugf("req=%v(%v), id=%v", req, formatStringDate(req), id)
+	log.Debugf("id: %v, req: %v(%v)", id, req, formatStringDate(req))
 
 	videoJson, err := getVideoById(id)
-
-	log.Debug("set video to cache")
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

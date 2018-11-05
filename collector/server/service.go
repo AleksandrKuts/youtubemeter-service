@@ -418,7 +418,10 @@ func getMetersVideos(id string, playList *YoutubePlayList) {
 
 		rVideo, ok := requestVideos[videoId]
 		if ok == true {
-			// Перевірка чи не потрібно припинити обробку відео за часом
+			
+			// Заносимо метрики до БД в двох випадках:
+			//   1. якщо пройшов заданий період ( PeriodCount ) 
+			//   2. якщо змінилась будь яка метрика (лайки, дізлайки тощо)
 			if time.Since(rVideo.timeCount) > *config.PeriodCount ||
 				rVideo.CommentCount != videoCommentCount ||
 				rVideo.LikeCount != videoLikeCount ||
