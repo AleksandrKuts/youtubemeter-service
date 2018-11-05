@@ -6,7 +6,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"time"
 	"github.com/vharitonsky/iniflags"
-	"fmt"
 	"strings"	
 )
 
@@ -27,6 +26,7 @@ var (
 	debugLevel = flag.String("debugLevel", "info", "debug level: debug, info, warn, error, dpanic, panic, fatal. Example: error")
 	Log = flag.String("Log", "backend.log", "log files")
 	LogError = flag.String("LogError", "backend_error.log", "log files")
+	LogTimeFormat = flag.String("LogTimeFormat", "02-01-2006 15:04:05", "log time format")
 
 	DBHost = flag.String("dbhost", "localhost", "The database's host to connect to. Values that start with / are for unix")
 	DBPort = flag.String("dbport", "5432", "The database's port to bind to")
@@ -40,7 +40,7 @@ var (
 
 
 func myTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-	enc.AppendString(t.Format("02-01-2006 15:04:05"))
+	enc.AppendString(t.Format(*LogTimeFormat))
 }
 
 func init() {
@@ -98,6 +98,7 @@ func init() {
 	Logger.Warnf("debug level=%s", atomicLevel)
 	Logger.Warnf("Log=%s", Log)
 	Logger.Warnf("LogError=%s", LogError)
+	Logger.Warnf("LogTimeFormat=%s", LogTimeFormat)
 	
 	Logger.Infof("addr=%s", *Addr)
 	Logger.Infof("timeout=%s", *Timeout)

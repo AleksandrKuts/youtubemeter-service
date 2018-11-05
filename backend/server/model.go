@@ -67,14 +67,25 @@ type YoutubeVideoShort struct {
 	PublishedAt time.Time `json:"publishedat"`
 }
 
-type MetricsInCache struct {
-	create time.Time
-	publishedAt time.Time
-	responce []byte
-}
+//type MetricsInCache struct {
+//	create time.Time
+//	publishedAt time.Time
+//	responce []byte
+//}
 
 type VideoInCache struct {
-	create time.Time
+	updateMetrics time.Time
 	publishedAt time.Time
-	responce []byte
+	videoResponce []byte
+	metricsResponce []byte
+}
+
+func (v *VideoInCache) updateCacheVideo(publishedAt time.Time, videoResponce []byte) {
+	v.videoResponce = videoResponce
+	v.publishedAt = publishedAt
+}
+
+func (v *VideoInCache) updateCacheMetrics(metricsResponce []byte) {
+	v.updateMetrics = time.Now()
+	v.metricsResponce = metricsResponce
 }
