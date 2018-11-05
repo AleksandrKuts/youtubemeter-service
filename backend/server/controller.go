@@ -130,7 +130,7 @@ func handlerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		method := r.Method
 		origin := r.Header.Get("Origin")
-		log.Infof("method: %v, uri: %v, add: %v, origin: [%v], host: %v", method, r.RequestURI, r.RemoteAddr, origin, r.Host)
+		log.Infof("method: %v, uri: %v, addr: %v, origin: [%v], host: %v", method, r.RequestURI, r.RemoteAddr, origin, r.Host)
 
 		if origin == *config.Origin {
 			w.Header().Set("Access-Control-Allow-Origin", origin)

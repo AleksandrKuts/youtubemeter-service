@@ -221,7 +221,7 @@ func getMetricsByIdFromDB(id string, from, to string) ([]*Metrics, error) {
 	var rows *sql.Rows
 	var err error
 
-	log.Debugf("id: %v, from=%v, to=%v", id, from, to)
+	log.Debugf("id: %v, from: %v, to: %v", id, from, to)
 
 	// якщо період не заданий обираємо всі дані
 	if from == "" && to == "" {

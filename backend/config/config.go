@@ -18,7 +18,7 @@ var (
 	MaxViewVideosInPlayLists = flag.Int("MaxViewVideosInPlayLists", 30, "The maximum number of videos to display in the playlist. Example: 30")
 
 
-	EnableCache = flag.Bool("EnableCache", true, "Enable cache?")
+	EnableCache = flag.Bool("enableCache", true, "Enable cache?")
 	PeriodMeterCache = flag.Duration("periodMetricCache", time.Second * 60, "the frequency of checking video meter - e.g. 60s or 1m")
 	PeriodCollectionCache = flag.Duration("periodCollectCache", time.Hour * 24 * 14, "the collection period video statistics from the date and time that the video was uploaded- e.g. 336h")
 
