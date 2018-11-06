@@ -11,28 +11,28 @@ import (
 
 var (
 	// Get command options
-	debugLevel = flag.String("debugLevel", "info", "debug level: debug, info, warn, error, dpanic, panic, fatal. Example: -dlevel error")
-	Log = flag.String("Log", "collector.log", "log files")
-	LogError = flag.String("LogError", "collector_error.log", "log files")
+	debugLevel = flag.String("debugLevel", "info", "")
+	Log = flag.String("Log", "collector.log", "")
+	LogError = flag.String("LogError", "collector_error.log", "")
 
-	FileSecret = flag.String("fileToken", "client_secret.json", "client secret file")
-	CredentialFile = flag.String("fileCredential", "yotubemetric_credential.json", "client credential file")
+	FileSecret = flag.String("fileToken", "client_secret.json", "")
+	CredentialFile = flag.String("fileCredential", "yotubemetric_credential.json", "")
 	
-	Timeout = flag.Duration("timeout", time.Second * 15, "the duration for which the server wait for existing connections to finish - e.g. 15s or 1m")
+	Timeout = flag.Duration("timeout", time.Second * 15, "")
 
-	PeriodPlayList = flag.Duration("periodPlayList", time.Second * 600, "the frequency of checking change's play list - e.g. 600s or 1m")
-	PeriodVideo = flag.Duration("periodVideo", time.Second * 60, "the frequency of checking a new video - e.g. 600s or 5m")
-	PeriodMeter = flag.Duration("periodMetric", time.Second * 60, "the frequency of checking video meter - e.g. 60s or 1m")
-	PeriodCount = flag.Duration("periodSaveMetricIdle", time.Hour * 1, "the frequency of preservation of metrics if they do not change - e.g. 1h or 30m")
-	PeriodDeleted = flag.Duration("periodFinalDeletion", time.Hour * 24, "the frequency of delete deactivated playlist and video - e.g. 60s or 1m")
-	PeriodСollection = flag.Duration("periodCollect", time.Hour * 24 * 14, "the collection period video statistics from the date and time that the video was uploaded- e.g. 336h")
+	PeriodPlayList = flag.Duration("periodPlayList", time.Second * 600, "")
+	PeriodVideo = flag.Duration("periodVideo", time.Second * 60, "")
+	PeriodMeter = flag.Duration("periodMetric", time.Second * 60, "")
+	PeriodCount = flag.Duration("periodSaveMetricIdle", time.Hour * 1, "")
+	PeriodDeleted = flag.Duration("periodFinalDeletion", time.Hour * 24, "")
+	PeriodСollection = flag.Duration("periodCollect", time.Hour * 24 * 14, "")
 	
-	DBHost = flag.String("dbhost", "localhost", "The database's host to connect to. Values that start with / are for unix")
-	DBPort = flag.String("dbport", "5432", "The database's port to bind to")
-	DBName = flag.String("dbname", "basename", "The name of the database to connect to")
-	DBUser = flag.String("dbuser", "username", "The database's user to sign in as")
-	DBPassword = flag.String("dbpasswd", "userpasswd", "The database's user's password")
-	DBSSLMode = flag.String("dbsslmode", "disable", "Whether or not to use SSL for the database's host")
+	DBHost = flag.String("dbhost", "localhost", "")
+	DBPort = flag.String("dbport", "5432", "")
+	DBName = flag.String("dbname", "basename", "")
+	DBUser = flag.String("dbuser", "username", "")
+	DBPassword = flag.String("dbpasswd", "userpasswd", "")
+	DBSSLMode = flag.String("dbsslmode", "disable", "")
 
 	Logger *zap.SugaredLogger	
 )
@@ -68,7 +68,6 @@ func init() {
 		atomicLevel = zapcore.InfoLevel
 	}
 
-
 	// Set loggin systems
 	cfg := zap.Config{
 		Encoding:         "console",
@@ -91,23 +90,21 @@ func init() {
 
 	logger, _ := cfg.Build()
 	defer logger.Sync() // flushes buffer, if any
-
 	Logger = logger.Sugar()	
-	Logger = logger.Sugar()
 	
 	Logger.Warnf("debug level=%v", atomicLevel)
-	Logger.Warnf("Log=%s", Log)
-	Logger.Warnf("LogError=%s", LogError)
+	Logger.Debugf("Log=%s", Log)
+	Logger.Debugf("LogError=%s", LogError)
 
-	Logger.Infof("fileSecret=%v", *FileSecret)
-	Logger.Infof("timeout=%s", *Timeout)
+	Logger.Debugf("fileSecret=%v", *FileSecret)
+	Logger.Debugf("timeout=%s", *Timeout)
 	
-	Logger.Infof("PeriodPlayList=%v", *PeriodPlayList)
-	Logger.Infof("PeriodVideo=%v", *PeriodVideo)
-	Logger.Infof("PeriodMeter=%v", *PeriodMeter)
-	Logger.Infof("PeriodCount=%v", *PeriodCount)
-	Logger.Infof("PeriodDeleted=%v", *PeriodDeleted)
-	Logger.Infof("PeriodСollection=%v", *PeriodСollection)
+	Logger.Debugf("PeriodPlayList=%v", *PeriodPlayList)
+	Logger.Debugf("PeriodVideo=%v", *PeriodVideo)
+	Logger.Debugf("PeriodMeter=%v", *PeriodMeter)
+	Logger.Debugf("PeriodCount=%v", *PeriodCount)
+	Logger.Debugf("PeriodDeleted=%v", *PeriodDeleted)
+	Logger.Debugf("PeriodСollection=%v", *PeriodСollection)
 
 	Logger.Debugf("dbhost=%s", *DBHost)
 	Logger.Debugf("dbport=%s", *DBPort)

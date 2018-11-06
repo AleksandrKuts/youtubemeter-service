@@ -14,9 +14,6 @@ import (
 	"time"
 )
 
-const MIN_PORT = 1
-const MAX_PORT = 1<<16 - 1 // 65535
-
 const CONTENT_TYPE_KEY = "Content-Type"
 const CONTENT_TYPE_VALUE = "application/json"
 
@@ -126,14 +123,16 @@ func printRouter(r *mux.Router) {
 	}
 }
 
+// Перехоплення та обробка всіх запитів
 func handlerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		method := r.Method
 		origin := r.Header.Get("Origin")
 		log.Infof("method: %v, uri: %v, addr: %v, origin: [%v], host: %v", method, r.RequestURI, r.RemoteAddr, origin, r.Host)
 
+		// Перевірка на валідний Origin  
 		if origin == *config.Origin {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 			w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
@@ -189,7 +188,6 @@ func appendPlaylistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
 	w.WriteHeader(http.StatusOK)
 
 	log.Warnf("appended playlist=%v", playlist)
@@ -219,7 +217,6 @@ func updatePlaylistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
 	w.WriteHeader(http.StatusOK)
 	log.Infof("updated playlist=%v", playlist)
 }
@@ -241,7 +238,6 @@ func deletePlaylistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
 	w.WriteHeader(http.StatusOK)
 	log.Infof("deleted playlist with id=%v", id)
 }

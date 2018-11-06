@@ -46,7 +46,7 @@ func getVideoById(id string) ([]byte, error) {
 		videoi, ok = cacheVideos.Get(id)
 		log.Debugf("id: %v, cache, have data? %v", id, ok)
 
-		// Перевіряємо чі є дані в кешу
+		// Перевіряємо чи є дані в кеші
 		if ok {
 			video := videoi.(*VideoInCache)
 			log.Debugf("id: %v, metrics: %v, video: %v, published: %v", id, video.updateMetrics, video.updateVideo, video.publishedAt)
@@ -70,6 +70,7 @@ func getVideoById(id string) ([]byte, error) {
 		return nil, err
 	}
 
+	// Конвертуємо відповідь в json-формат
 	stringJsonVideo, err := json.Marshal(*youtubeVideo)
 	if err != nil {
 		log.Errorf("Error convert select to video: response=%v, error=%v", *youtubeVideo, err)
@@ -94,6 +95,7 @@ func getVideoById(id string) ([]byte, error) {
 }
 
 // Отримати метрики по відео id за заданий період
+// Такий запит не використовуэ кеш
 func getMetricsByIdFromTo(id string, from, to string) ([]byte, error) {
 	// В кеші актуальної інформации не знайдено, запрошуемо в БД
 	response, err := getMetricsByIdFromDB(id, from, to)
@@ -101,6 +103,7 @@ func getMetricsByIdFromTo(id string, from, to string) ([]byte, error) {
 		return nil, err
 	}
 
+	// Конвертуємо відповідь в json-формат
 	metricsVideoJson, err := json.Marshal(response)
 	if err != nil {
 		log.Errorf("Error convert select to Metrics: response=%v, error=%v", response, err)
@@ -111,14 +114,15 @@ func getMetricsByIdFromTo(id string, from, to string) ([]byte, error) {
 	return metricsVideoJson, nil
 }
 
-// Отримати метрики по відео id за заданий період
+// Отримати метрики по відео id або за весь період, або за заданий період
+// Якщо період не заданий то використовується кеш, якщо період заданий кеш не використовується
 func getMetricsById(id string, from, to string) ([]byte, error) {
 	if id == "" {
 		return nil, errors.New("video id is null")
 	}
 	log.Debugf("id: %v, from: %v, to: %v", id, from, to)
 
-	// Перевірка чи є дані в кеші. В кеші зберігаються тільки запроси за весь період
+	// Период заданий, такий запит обробляємо окремо
 	if from != "" || to != "" {
 		return getMetricsByIdFromTo(id, from, to)
 	}
@@ -130,7 +134,7 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 		videoi, ok = cacheVideos.Get(id)
 		log.Debugf("id: %v, cache, have data? %v", id, ok)
 
-		// Перевіряємо чі є дані в кешу
+		// Перевіряємо чи є дані в кеші
 		if ok {
 			video := videoi.(*VideoInCache)
 			log.Debugf("id: %v, metrics: %v, video: %v, published: %v", id, video.updateMetrics, video.updateVideo, video.publishedAt)
@@ -155,6 +159,7 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 		return nil, err
 	}
 
+	// Конвертуємо відповідь в json-формат
 	metricsVideoJson, err := json.Marshal(response)
 	if err != nil {
 		log.Errorf("Error convert select to Metrics: response=%v, error=%v", response, err)
@@ -188,7 +193,7 @@ func getVideosByPlayListId(id string) ([]byte, error) {
 		playlisti, ok := cachePlayLists.Get(id)
 		log.Debugf("id: %v, cache, have data? %v", id, ok)
 
-		// Перевіряємо чі є дані в кешу
+		// Перевіряємо чи є дані в кеші
 		if ok {
 			playlist := playlisti.(*PlayListInCache)
 			log.Debugf("id: %v, timeUpdate: %v", id, playlist.timeUpdate )

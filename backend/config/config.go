@@ -10,37 +10,34 @@ import (
 )
 
 var (
-	// Get command options
-	Addr = flag.String("Addr", "0.0.0.0:3000", "server's port. Example: 0.0.0.0:3000")
-	Timeout = flag.Duration("timeout", time.Second * 15, "the duration for which the server wait for existing connections to finish - e.g. 15s or 1m")
-	ListenAdmin = flag.Bool("ListenAdmin", false, "Activate the playlist administration service")
-	Origin = flag.String("Origin", "*", "Source from which the request to the service is allowed. Example: 0.0.0.0:4200")
-	MaxViewVideosInPlayLists = flag.Int("MaxViewVideosInPlayLists", 30, "The maximum number of videos to display in the playlist. Example: 30")
-
+	Addr = flag.String("Addr", "0.0.0.0:3000", "")
+	Timeout = flag.Duration("timeout", time.Second * 15, "")
+	ListenAdmin = flag.Bool("ListenAdmin", false, "")
+	Origin = flag.String("Origin", "*", "")
+	MaxViewVideosInPlayLists = flag.Int("MaxViewVideosInPlayLists", 30, "")
 
 	EnableCache = flag.Bool("enableCache", true, "Enable cache?")
-	PeriodMeterCache = flag.Duration("periodMetricCache", time.Second * 60, "the frequency of checking video meter - e.g. 60s or 1m")
-	PeriodCollectionCache = flag.Duration("periodCollectCache", time.Hour * 24 * 14, "the collection period video statistics from the date and time that the video was uploaded- e.g. 336h")
-	PeriodVideoCache = flag.Duration("periodVideoCache", time.Minute * 5, "the collection period video statistics from the date and time that the video was uploaded- e.g. 336h")
+	PeriodMeterCache = flag.Duration("periodMetricCache", time.Second * 60, "")
+	PeriodCollectionCache = flag.Duration("periodCollectCache", time.Hour * 24 * 14, "")
+	PeriodVideoCache = flag.Duration("periodVideoCache", time.Minute * 5, "")
 
-	MaxSizeCacheVideo = flag.Int("maxSizeCacheVideo", 1000, "The maximum size of videos cache. Example: 100")
-	MaxSizeCachePlaylists = flag.Int("maxSizeCachePlaylists", 1000, "The maximum size of metrics cache. Example: 100")
+	MaxSizeCacheVideo = flag.Int("maxSizeCacheVideo", 1000, "")
+	MaxSizeCachePlaylists = flag.Int("maxSizeCachePlaylists", 1000, "")
 
-	debugLevel = flag.String("debugLevel", "info", "debug level: debug, info, warn, error, dpanic, panic, fatal. Example: error")
-	Log = flag.String("Log", "backend.log", "log files")
-	LogError = flag.String("LogError", "backend_error.log", "log files")
-	LogTimeFormat = flag.String("LogTimeFormat", "02-01-2006 15:04:05", "log time format")
+	debugLevel = flag.String("debugLevel", "info", "")
+	Log = flag.String("Log", "backend.log", "")
+	LogError = flag.String("LogError", "backend_error.log", "")
+	LogTimeFormat = flag.String("LogTimeFormat", "02-01-2006 15:04:05", "")
 
-	DBHost = flag.String("dbhost", "localhost", "The database's host to connect to. Values that start with / are for unix")
-	DBPort = flag.String("dbport", "5432", "The database's port to bind to")
-	DBName = flag.String("dbname", "basename", "The name of the database to connect to")
-	DBUser = flag.String("dbuser", "username", "The database's user to sign in as")
-	DBPassword = flag.String("dbpasswd", "userpasswd", "The database's user's password")
-	DBSSLMode = flag.String("dbsslmode", "disable", "Whether or not to use SSL for the database's host")
+	DBHost = flag.String("dbhost", "localhost", "")
+	DBPort = flag.String("dbport", "5432", "")
+	DBName = flag.String("dbname", "basename", "")
+	DBUser = flag.String("dbuser", "username", "")
+	DBPassword = flag.String("dbpasswd", "userpasswd", "")
+	DBSSLMode = flag.String("dbsslmode", "disable", "")
 
 	Logger *zap.SugaredLogger	
 )
-
 
 func myTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(t.Format(*LogTimeFormat))
@@ -93,28 +90,26 @@ func init() {
 	}
 
 	logger, _ := cfg.Build()
-	defer logger.Sync() // flushes buffer, if any
-
-	
+	defer logger.Sync() // flushes buffer, if any	
 	Logger = logger.Sugar()
 
 	Logger.Warnf("debug level=%s", atomicLevel)
-	Logger.Warnf("Log=%s", Log)
-	Logger.Warnf("LogError=%s", LogError)
-	Logger.Warnf("LogTimeFormat=%s", LogTimeFormat)
+	Logger.Debugf("Log=%s", Log)
+	Logger.Debugf("LogError=%s", LogError)
+	Logger.Debugf("LogTimeFormat=%s", LogTimeFormat)
 	
-	Logger.Infof("addr=%s", *Addr)
-	Logger.Infof("timeout=%s", *Timeout)
-	Logger.Infof("ListenAdmin=%v", *ListenAdmin)
-	Logger.Infof("Origin=%v", *Origin)
-	Logger.Infof("MaxViewVideosInPlayLists=%v", *MaxViewVideosInPlayLists)
-	Logger.Infof("PeriodMeter=%v", *PeriodMeterCache)
-	Logger.Infof("PeriodСollection=%v", *PeriodCollectionCache)
-	Logger.Infof("PeriodVideoCache=%v", *PeriodVideoCache)
+	Logger.Debugf("addr=%s", *Addr)
+	Logger.Debugf("timeout=%s", *Timeout)
+	Logger.Debugf("ListenAdmin=%v", *ListenAdmin)
+	Logger.Debugf("Origin=%v", *Origin)
+	Logger.Debugf("MaxViewVideosInPlayLists=%v", *MaxViewVideosInPlayLists)
+	Logger.Debugf("PeriodMeter=%v", *PeriodMeterCache)
+	Logger.Debugf("PeriodСollection=%v", *PeriodCollectionCache)
+	Logger.Debugf("PeriodVideoCache=%v", *PeriodVideoCache)
 
-	Logger.Infof("EnableCache=%v", *EnableCache)
-	Logger.Infof("MaxSizeCacheVideo=%v", *MaxSizeCacheVideo)
-	Logger.Infof("MaxSizeCachePlaylists=%v", *MaxSizeCachePlaylists)
+	Logger.Debugf("EnableCache=%v", *EnableCache)
+	Logger.Debugf("MaxSizeCacheVideo=%v", *MaxSizeCacheVideo)
+	Logger.Debugf("MaxSizeCachePlaylists=%v", *MaxSizeCachePlaylists)
 
 	Logger.Debugf("dbhost=%s", *DBHost)
 	Logger.Debugf("dbport=%s", *DBPort)	

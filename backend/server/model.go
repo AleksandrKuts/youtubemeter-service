@@ -67,6 +67,26 @@ type YoutubeVideoShort struct {
 	PublishedAt time.Time `json:"publishedat"`
 }
 
+// Metric: A video resource represents a metric YouTube video.
+type Metrics struct {
+	// CommentCount: The number of comments for the video.
+	CommentCount uint64 `json:"comment"`
+
+	// LikeCount: The number of users who have indicated that they liked the
+	// video by giving it a positive rating.
+	LikeCount uint64 `json:"like"`
+
+	// DislikeCount: The number of users who have indicated that they
+	// disliked the video by giving it a negative rating.
+	DislikeCount uint64 `json:"dislike"`
+
+	// ViewCount: The number of times the video has been viewed.
+	ViewCount uint64 `json:"view"`
+
+	// Last poll time to get metrics
+	Time time.Time `json:"mtime"`
+}
+
 // Структура для кешу відео. 
 type PlayListInCache struct {
 	// Час останнього оновлення. Данні за цей період не змінюються (максимум додасться одне відео)

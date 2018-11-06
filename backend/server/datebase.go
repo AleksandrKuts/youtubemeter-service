@@ -24,9 +24,8 @@ const GET_METRICS_BY_IDVIDEO = "Select * FROM return_metrics($1)"
 const GET_METRICS_BY_IDVIDEO_BETWEEN_DATE = "Select * FROM return_metrics($1, $2, $3)"
 
 const GET_VIDEO_BY_ID = "SELECT * FROM return_video($1)"
-const GET_VIDEOS_BY_ID_PLAYLIST = "SELECT id, TRIM(title), publishedat FROM video WHERE idpl = $1 ORDER BY publishedat DESC LIMIT $2"
-
-const NOT_DATA = "NOT_DATA"
+const GET_VIDEOS_BY_ID_PLAYLIST = "SELECT id, TRIM(title), publishedat FROM video WHERE idpl = $1 " +
+	" ORDER BY publishedat DESC LIMIT $2"
 
 // creat connections string
 // example: host=127.0.0.100 port=5432 dbname=base1 user=user1 password=lalala sslmode=disable"
@@ -128,7 +127,10 @@ func deletePlayList(playlistId string) error {
 	return nil
 }
 
-// Отримати всі активні плей-листи, якщо плей-лист не активний його треба активувати через інтерфейс адміністратора
+// Отримати плейлисти
+// onlyEnable - які плейлисти вибирати
+//   true  - тільки активні, якщо плейлист не активний його треба активувати через інтерфейс адміністратора
+//   false - всі
 func getPlaylists(onlyEnable bool) ([]byte, error) {
 	log.Debugf("dbstats=%v", db.Stats())
 
@@ -168,6 +170,7 @@ func getPlaylists(onlyEnable bool) ([]byte, error) {
 		return nil, err
 	}
 
+	// Конвертуємо відповідь в json-формат
 	stringJsonPlaylists, err := json.Marshal(response)
 
 	if err != nil {
@@ -178,26 +181,6 @@ func getPlaylists(onlyEnable bool) ([]byte, error) {
 	log.Debugf("Playlists=%v", string(stringJsonPlaylists))
 
 	return stringJsonPlaylists, nil
-}
-
-// Video: A video resource represents a YouTube video.
-type Metrics struct {
-	// CommentCount: The number of comments for the video.
-	CommentCount uint64 `json:"comment"`
-
-	// LikeCount: The number of users who have indicated that they liked the
-	// video by giving it a positive rating.
-	LikeCount uint64 `json:"like"`
-
-	// DislikeCount: The number of users who have indicated that they
-	// disliked the video by giving it a negative rating.
-	DislikeCount uint64 `json:"dislike"`
-
-	// ViewCount: The number of times the video has been viewed.
-	ViewCount uint64 `json:"view"`
-
-	// Last poll time to get metrics
-	Time time.Time `json:"mtime"`
 }
 
 // Перевірка дати, заданої рядком мілісекунд, та її форматування
@@ -288,7 +271,6 @@ func getVideoByIdFromDB(id string) ( *YoutubeVideo, error) {
 
 	err := db.QueryRow(GET_VIDEO_BY_ID, id).Scan(&idpl, &title, &description, &chtitle, &chid, &publishedat, &count_metrics, &max_timemetric, &min_timemetric)
 	if err != nil {
-//		youtubeVideo = &YoutubeVideo{NOT_DATA, NOT_DATA, NOT_DATA, NOT_DATA, NOT_DATA, time.Now(), 0, time.Now(), time.Now()}
 		log.Errorf("Error get videos by id: %v", err)
 		return nil, err
 	}
@@ -302,7 +284,7 @@ func getVideoByIdFromDB(id string) ( *YoutubeVideo, error) {
 	return youtubeVideo, nil
 }
 
-// Отримати метрики по відео id за заданий період
+// Отримати список відео по id плейлиста
 func getVideosByPlayListIdFromDB(id string) ([]byte, error) {
 	if id == "" {
 		return nil, errors.New("video id is null")
@@ -333,6 +315,7 @@ func getVideosByPlayListIdFromDB(id string) ([]byte, error) {
 		return nil, err
 	}
 
+	// Конвертуємо відповідь в json-формат
 	stringVideos, err := json.Marshal(response)
 
 	if err != nil {

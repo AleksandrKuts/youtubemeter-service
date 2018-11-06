@@ -40,13 +40,14 @@ const TIME_LAYOUT = "2006-01-02T15:04:05.999999-07:00"
 
 const GET_PLAYLISTS = "SELECT pl.id FROM playlist pl WHERE pl.enable = true"
 
-const INSERT_VIDEO = "INSERT INTO video ( id, idpl, publishedat, title, description, chid, chtitle ) VALUES ( $1, $2, $3, $4, $5, $6, $7 ) " +
+const INSERT_VIDEO = "INSERT INTO video ( id, idpl, publishedat, title, description, chid, chtitle ) " +
+	"VALUES ( $1, $2, $3, $4, $5, $6, $7 ) " +
 	"ON CONFLICT (id) DO UPDATE SET " +
-	" publishedat = EXCLUDED.publishedat, title = EXCLUDED.title, description = EXCLUDED.description, chid = EXCLUDED.chid, chtitle = EXCLUDED.chtitle"
+	"publishedat = EXCLUDED.publishedat, title = EXCLUDED.title, description = EXCLUDED.description, " +
+	"chid = EXCLUDED.chid, chtitle = EXCLUDED.chtitle"
 
-const INSERT_METRICS = "INSERT INTO metric ( idVideo, CommentCount, LikeCount, DislikeCount, ViewCount ) VALUES ( $1, $2, $3, $4, $5 )"
-
-
+const INSERT_METRICS = "INSERT INTO metric ( idVideo, CommentCount, LikeCount, DislikeCount, ViewCount ) " +
+	"VALUES ( $1, $2, $3, $4, $5 )"
 
 var db *sql.DB
 var errDB error
@@ -118,6 +119,7 @@ func GetPlaylistIDs() (map[string]bool, error) {
 	return response, nil
 }
 
+// Додати відео
 func AddVideo(id, idpl string, publishedat time.Time, title, description, channelId, channelTitle string) error {
 	if id == "" {
 		return errors.New("Error add video, id is null")
@@ -143,6 +145,7 @@ func AddVideo(id, idpl string, publishedat time.Time, title, description, channe
 	return nil
 }
 
+// Додати метрики
 func AddMetric(metrics []*Metrics) error {
 
 	txn, err := db.Begin()
