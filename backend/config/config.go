@@ -21,9 +21,10 @@ var (
 	EnableCache = flag.Bool("enableCache", true, "Enable cache?")
 	PeriodMeterCache = flag.Duration("periodMetricCache", time.Second * 60, "the frequency of checking video meter - e.g. 60s or 1m")
 	PeriodCollectionCache = flag.Duration("periodCollectCache", time.Hour * 24 * 14, "the collection period video statistics from the date and time that the video was uploaded- e.g. 336h")
+	PeriodVideoCache = flag.Duration("periodVideoCache", time.Minute * 5, "the collection period video statistics from the date and time that the video was uploaded- e.g. 336h")
 
-	MaxSizeCacheVideo = flag.Int("MaxSizeCacheVideo", 1000, "The maximum size of videos cache. Example: 100")
-	MaxSizeCacheMetrics = flag.Int("MaxSizeCacheMetrics", 1000, "The maximum size of metrics cache. Example: 100")
+	MaxSizeCacheVideo = flag.Int("maxSizeCacheVideo", 1000, "The maximum size of videos cache. Example: 100")
+	MaxSizeCachePlaylists = flag.Int("maxSizeCachePlaylists", 1000, "The maximum size of metrics cache. Example: 100")
 
 	debugLevel = flag.String("debugLevel", "info", "debug level: debug, info, warn, error, dpanic, panic, fatal. Example: error")
 	Log = flag.String("Log", "backend.log", "log files")
@@ -109,10 +110,11 @@ func init() {
 	Logger.Infof("MaxViewVideosInPlayLists=%v", *MaxViewVideosInPlayLists)
 	Logger.Infof("PeriodMeter=%v", *PeriodMeterCache)
 	Logger.Infof("PeriodСollection=%v", *PeriodCollectionCache)
+	Logger.Infof("PeriodVideoCache=%v", *PeriodVideoCache)
 
 	Logger.Infof("EnableCache=%v", *EnableCache)
 	Logger.Infof("MaxSizeCacheVideo=%v", *MaxSizeCacheVideo)
-	Logger.Infof("MaxSizeCacheMetrics=%v", *MaxSizeCacheMetrics)
+	Logger.Infof("MaxSizeCachePlaylists=%v", *MaxSizeCachePlaylists)
 
 	Logger.Debugf("dbhost=%s", *DBHost)
 	Logger.Debugf("dbport=%s", *DBPort)	

@@ -303,8 +303,7 @@ func getVideoByIdFromDB(id string) ( *YoutubeVideo, error) {
 }
 
 // Отримати метрики по відео id за заданий період
-func getVideosByPlayListId(id string) ([]byte, error) {
-	// якщо період не заданий обираємо всі дані
+func getVideosByPlayListIdFromDB(id string) ([]byte, error) {
 	if id == "" {
 		return nil, errors.New("video id is null")
 	}
@@ -341,7 +340,7 @@ func getVideosByPlayListId(id string) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Debugf("Metrics=%v", string(stringVideos))
+	log.Debugf("id: %v, playlist=%v", id, string(stringVideos))
 
 	return stringVideos, nil
 }

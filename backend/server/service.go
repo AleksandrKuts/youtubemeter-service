@@ -9,7 +9,10 @@ import (
 )
 
 // Кеш для відео
-var cacheVideo *lru.TwoQueueCache
+var cacheVideos *lru.TwoQueueCache
+
+// Кеш для плейлистів
+var cachePlayLists *lru.TwoQueueCache
 
 var MIN_TIME = time.Time{}
 
@@ -17,7 +20,12 @@ func init() {
 	var err error
 
 	if *config.EnableCache {
-		cacheVideo, err = lru.New2Q(*config.MaxSizeCacheVideo)
+		cacheVideos, err = lru.New2Q(*config.MaxSizeCacheVideo)
+		if err != nil {
+			log.Fatalf("err: %v", err)
+		}
+
+		cachePlayLists, err = lru.New2Q(*config.MaxSizeCachePlaylists)
 		if err != nil {
 			log.Fatalf("err: %v", err)
 		}
@@ -35,15 +43,16 @@ func getVideoById(id string) ([]byte, error) {
 	var videoi interface{}
 	
 	if *config.EnableCache {
-		videoi, ok = cacheVideo.Get(id)
-		log.Debugf("id: %v, cache, have data?: %v", id, ok)
+		videoi, ok = cacheVideos.Get(id)
+		log.Debugf("id: %v, cache, have data? %v", id, ok)
 
-		// Якщо дані в кеші є, то беремо їх тільки якщо з останнього запиту пройшло часу менш
-		// ніж період збору метрик, або якщо збір метрик вже припинився.
+		// Перевіряємо чі є дані в кешу
 		if ok {
 			video := videoi.(*VideoInCache)
 			log.Debugf("id: %v, metrics: %v, video: %v, published: %v", id, video.updateMetrics, video.updateVideo, video.publishedAt)
 
+			// Дані з кешу беремо тільки якщо з останнього запиту пройшло часу менш
+			// ніж період збору метрик, або якщо збір метрик вже припинився.
 			if time.Since(video.publishedAt) > *config.PeriodCollectionCache ||
 				time.Since(video.updateVideo) < *config.PeriodMeterCache {
 
@@ -51,6 +60,7 @@ func getVideoById(id string) ([]byte, error) {
 
 				return video.videoResponce, nil
 			}
+			log.Debugf("id: %v, cache, skip", id)
 		}
 	}
 
@@ -75,7 +85,7 @@ func getVideoById(id string) ([]byte, error) {
 			log.Debugf("id: %v, cache, update video, published: %v", id, youtubeVideo.PublishedAt)
 		} else {
 			// Додаємо запит до кешу
-			cacheVideo.Add(id, &VideoInCache{MIN_TIME, time.Now(), youtubeVideo.PublishedAt, stringJsonVideo, nil})
+			cacheVideos.Add(id, &VideoInCache{MIN_TIME, time.Now(), youtubeVideo.PublishedAt, stringJsonVideo, nil})
 			log.Debugf("id: %v, cache, add video, published: %v", id, youtubeVideo.PublishedAt)
 		}
 	}
@@ -117,15 +127,16 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 	var videoi interface{}
 	
 	if *config.EnableCache {
-		videoi, ok = cacheVideo.Get(id)
+		videoi, ok = cacheVideos.Get(id)
 		log.Debugf("id: %v, cache, have data? %v", id, ok)
 
-		// Якщо дані в кеші є, то беремо їх тільки якщо з останнього запиту пройшло часу менш
-		// ніж період збору метрик, або якщо збір метрик вже припинився.
+		// Перевіряємо чі є дані в кешу
 		if ok {
 			video := videoi.(*VideoInCache)
 			log.Debugf("id: %v, metrics: %v, video: %v, published: %v", id, video.updateMetrics, video.updateVideo, video.publishedAt)
 
+			// Дані з кешу беремо тільки якщо з останнього запиту пройшло часу менш
+			// ніж період збору метрик, або якщо збір метрик вже припинився.
 			if time.Since(video.updateMetrics) < *config.PeriodMeterCache ||
 				time.Since(video.publishedAt) > *config.PeriodCollectionCache {
 
@@ -133,7 +144,7 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 
 				return video.metricsResponce, nil
 			}
-			log.Debug("cache, skip")
+			log.Debugf("id: %v, cache, skip", id)
 		}
 
 	}
@@ -159,10 +170,52 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 			log.Debugf("id: %v, cache, update metrics, published", id)
 		} else {
 			// Додаємо запит до кешу
-			cacheVideo.Add(id, &VideoInCache{time.Now(), MIN_TIME, time.Now(), nil, metricsVideoJson})
+			cacheVideos.Add(id, &VideoInCache{time.Now(), MIN_TIME, time.Now(), nil, metricsVideoJson})
 			log.Debugf("id: %v, cache, add metrics", id)
 		}
 	}
 
 	return metricsVideoJson, nil
+}
+
+// Отримати список відео по id плейлиста
+func getVideosByPlayListId(id string) ([]byte, error) {
+	if id == "" {
+		return nil, errors.New("video id is null")
+	}
+	
+	if *config.EnableCache {
+		playlisti, ok := cachePlayLists.Get(id)
+		log.Debugf("id: %v, cache, have data? %v", id, ok)
+
+		// Перевіряємо чі є дані в кешу
+		if ok {
+			playlist := playlisti.(*PlayListInCache)
+			log.Debugf("id: %v, timeUpdate: %v", id, playlist.timeUpdate )
+
+			// Дані з кешу беремо тільки якщо з останнього запиту пройшло часу менш
+			// ніж період перевірки списку відео в плейлисті
+			if time.Since(playlist.timeUpdate) < *config.PeriodVideoCache {
+				log.Debugf("id: %v, cache, playlist: %v", id, string(playlist.responce))
+
+				return playlist.responce, nil
+			}
+			log.Debugf("id: %v, cache, skip", id)
+		}
+
+	}
+	
+	// В кеші актуальної інформации не знайдено, запрошуемо в БД
+	stringVideos, err := getVideosByPlayListIdFromDB(id) 
+	if err != nil {
+		return nil, err
+	}
+	
+	if *config.EnableCache {
+		// Додаємо запит до кешу
+		cachePlayLists.Add(id, &PlayListInCache{time.Now(), stringVideos})
+		log.Debugf("id: %v, cache, add playlists", id)
+	}
+
+	return stringVideos, nil
 }

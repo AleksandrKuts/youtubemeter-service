@@ -68,6 +68,16 @@ type YoutubeVideoShort struct {
 }
 
 // Структура для кешу відео. 
+type PlayListInCache struct {
+	// Час останнього оновлення. Данні за цей період не змінюються (максимум додасться одне відео)
+	timeUpdate time.Time  
+	
+	// Дані по відео 
+	responce []byte
+}
+
+
+// Структура для кешу відео. 
 type VideoInCache struct {
 	// Час останнього оновлення метрик. Данні за цей період не змінюються (максимум додасться одна метрика)
 	updateMetrics time.Time  
