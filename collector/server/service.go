@@ -191,16 +191,16 @@ func checkPlayLists() {
 				if pl.deleted { // вже помічений на припинення обробки
 					if time.Since(pl.timeDeleted) > *config.PeriodDeleted { // перевіряємо, чи не час припиняти обробку
 						playlists.delete(id) // видалення
-						log.Infof("stop processing playlist with id: %v", id)
+						log.Infof("id: %v, stop processing playlist", id)
 					}
 				} else { // ще не помічений на припинення обробки
 					playlists.setDeletedPlayList(id) // помічаємо: підлягае припиненню обробки
-					log.Debugf("set stop processing playlist with id: %v", id)
+					log.Debugf("id: %v, set stop processing playlist", id)
 				}
 			} else { // не підлягае видаленню
 				if pl.deleted { // але раніше підлягав
 					playlists.canselDeletedPlayList(id) // відміна видалення
-					log.Debugf("cansel stop processing playlist with id: %v", id)
+					log.Debugf("id: %v, cansel stop processing playlist", id)
 				}
 			}
 
@@ -211,7 +211,7 @@ func checkPlayLists() {
 			_, ok := playlists.playlists[id]
 			if ok == false {
 				playlists.append(id) // додаемо новий PlayList
-				log.Infof("Append playlist with id: %v", id)
+				log.Infof("id: %v, Append playlist", id)
 			}
 		}
 
@@ -270,11 +270,11 @@ func checkVideosByPlaylistId(playListId string, playList *YoutubePlayList) {
 		return
 	}
 
+	log.Debug("check new video")
 	// перевіряємо плейлист на появу нових відео
 	for _, item := range response.Items {
 		videoId := item.ContentDetails.VideoId
-
-		log.Debugf("video: id=%v", videoId)
+		log.Debugf("id: %v, is new video?", videoId)
 
 		_, ok := playList.videos[videoId]
 		if ok == false { // такого відео ще нема, пробуємо додати
@@ -294,13 +294,13 @@ func checkElapsedVideos(playList *YoutubePlayList) {
 		if video.deleted { // якщо відео призначене для видалення
 			if time.Since(video.timeDeleted) > *config.PeriodDeleted { // перевіряємо, чи не час видаляти
 				playList.delete(id) // видалення
-				log.Infof("stop processing video with id: %v", id)
+				log.Infof("id: %v, stop processing video", id)
 			}
 		} else { // відео ще не призначене для видалення
 			// Перевірка чи не потрібно припинити обробку відео за часом
 			if time.Since(video.PublishedAt) > *config.PeriodСollection {
 				playList.setDeletedVideo(id)
-				log.Infof("set stop processing video with id: %v", id)
+				log.Infof("id: %v, set stop processing video", id)
 			}
 
 		}
@@ -328,7 +328,7 @@ func addVideo(playListId string, playList *YoutubePlayList, videoId string, item
 	}
 	timeElapsed := time.Since(timePublishedAt)
 	if timeElapsed > *config.PeriodСollection {
-		log.Debugf("skip video with id: %v, time elapsed: %v", videoId, timeElapsed)
+		log.Debugf("id: %v, skip video, time elapsed: %v", videoId, timeElapsed)
 		return
 	}
 
@@ -342,7 +342,7 @@ func addVideo(playListId string, playList *YoutubePlayList, videoId string, item
 	playList.mux.Lock()
 	defer playList.mux.Unlock()
 	playList.append(videoId, &YoutubeVideo{PublishedAt: timePublishedAt, Title: title, deleted: false})
-	log.Infof("add new video: id=%v, at=%v, title=%v ", videoId, timePublishedAt, title)
+	log.Infof("id: %v, add new video at: %v, title: %v", videoId, timePublishedAt, title)
 }
 
 func getMeters() {
@@ -409,7 +409,7 @@ func getMetersVideos(id string, playList *YoutubePlayList) {
 		videoDislikeCount := item.Statistics.DislikeCount
 		videoViewCount := item.Statistics.ViewCount
 
-		log.Debugf("id=%v, comment=%10v, like=%10v, dislike=%10v, view=%10v",
+		log.Debugf("id: %v, comment: %10v, like: %10v, dislike: %10v, view: %10v",
 			videoId,
 			videoCommentCount,
 			videoLikeCount,
@@ -430,7 +430,7 @@ func getMetersVideos(id string, playList *YoutubePlayList) {
 
 				rVideo.setMetrics(videoCommentCount, videoLikeCount, videoDislikeCount, videoViewCount)
 				metrics = append(metrics, &database.Metrics{videoId, videoCommentCount, videoLikeCount, videoDislikeCount, videoViewCount, time.Now()})
-				log.Debugf("save metrics, video id=%v", videoId)
+				log.Debugf("id: %v, save metrics", videoId)
 			}
 		} else {
 			log.Errorf("Cannot get request video with id %v=", videoId)
@@ -439,6 +439,6 @@ func getMetersVideos(id string, playList *YoutubePlayList) {
 
 	if len(metrics) > 0 {
 		database.AddMetric(metrics)
-		log.Infof("save metrics video for playlist id=%v", id)
+		log.Infof("id: %v, save metrics video for playlist", id)
 	}
 }

@@ -12,8 +12,8 @@ import (
 var (
 	// Get command options
 	debugLevel = flag.String("debugLevel", "info", "debug level: debug, info, warn, error, dpanic, panic, fatal. Example: -dlevel error")
-	Log = flag.String("Log", "backend.log", "log files")
-	LogError = flag.String("LogError", "backend_error.log", "log files")
+	Log = flag.String("Log", "collector.log", "log files")
+	LogError = flag.String("LogError", "collector_error.log", "log files")
 
 	FileSecret = flag.String("fileToken", "client_secret.json", "client secret file")
 	CredentialFile = flag.String("fileCredential", "yotubemetric_credential.json", "client credential file")
