@@ -17,6 +17,14 @@ type PlayList struct {
 
 	// Id: The ID that YouTube uses to uniquely identify the channel.
 	Idch string `json:"idch"`
+	
+	// The date and time that the item was added to the list PlayLists
+	Timeadd time.Time `json:"timeadd"`
+}
+
+type ResponcePlayList struct {
+	MaxVideoCount  int `json:"maxvideocount"`
+	PlayLists []PlayList `json:"playlists"`  
 }
 
 // Video: A video resource represents a YouTube video.

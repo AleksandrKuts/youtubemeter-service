@@ -18,8 +18,8 @@ const TIME_LAYOUT = "2006-01-02T15:04:05.999999-07:00"
 const INSERT_PLAYLIST = "INSERT INTO playlist ( id, title, enable, idch ) VALUES ( $1, $2, $3, $4)"
 const UPDATE_PLAYLIST = "UPDATE playlist SET title=$2, enable=$3, idch=$4 WHERE id = $1"
 const DELETE_PLAYLIST = "DELETE FROM playlist WHERE id = $1"
-const GET_PLAYLISTS = "SELECT id, title, enable, idch FROM playlist ORDER BY title"
-const GET_PLAYLISTS_ENABLE = "SELECT id, title, enable, idch FROM playlist WHERE enable = true ORDER BY title"
+const GET_PLAYLISTS = "SELECT id, title, enable, idch, timeadd FROM playlist ORDER BY title"
+const GET_PLAYLISTS_ENABLE = "SELECT id, title, enable, idch, timeadd FROM playlist WHERE enable = true ORDER BY title"
 const GET_METRICS_BY_IDVIDEO = "Select * FROM return_metrics($1)"
 const GET_METRICS_BY_IDVIDEO_BETWEEN_DATE = "Select * FROM return_metrics($1, $2, $3)"
 
@@ -131,7 +131,7 @@ func deletePlayListDB(playlistId string) error {
 // onlyEnable - які плейлисти вибирати
 //   true  - тільки активні, якщо плейлист не активний його треба активувати через інтерфейс адміністратора
 //   false - всі
-func getPlaylistsFromDB(onlyEnable bool) ([]byte, error) {
+func getPlaylistsFromDB(onlyEnable bool) ([]PlayList, error) {
 	log.Debugf("dbstats=%v", db.Stats())
 
 	var rows *sql.Rows
@@ -156,13 +156,14 @@ func getPlaylistsFromDB(onlyEnable bool) ([]byte, error) {
 		var Title string
 		var Enable bool
 		var Idch string
+		var Timeadd time.Time
 
-		rows.Scan(&Id, &Title, &Enable, &Idch)
+		rows.Scan(&Id, &Title, &Enable, &Idch, &Timeadd)
 		Id = strings.TrimSpace(Id)
 		Title = strings.TrimSpace(Title)
 		Idch = strings.TrimSpace(Idch)
 
-		response = append(response, PlayList{Id, Title, Enable, Idch})
+		response = append(response, PlayList{Id, Title, Enable, Idch, Timeadd})
 	}
 	err = rows.Err()
 	if err != nil {
@@ -170,17 +171,9 @@ func getPlaylistsFromDB(onlyEnable bool) ([]byte, error) {
 		return nil, err
 	}
 
-	// Конвертуємо відповідь в json-формат
-	stringJsonPlaylists, err := json.Marshal(response)
+	log.Error("Success get playlists from DB")
 
-	if err != nil {
-		log.Errorf("Error convert select to Playlists: response=%v, error=%v", response, err)
-		return nil, err
-	}
-
-	log.Debugf("Playlists=%v", string(stringJsonPlaylists))
-
-	return stringJsonPlaylists, nil
+	return response, nil
 }
 
 // Отримати метрики по відео id за заданий період
@@ -262,7 +255,7 @@ func getVideoByIdFromDB(id string) ( *YoutubeVideo, error) {
 	youtubeVideo := &YoutubeVideo{strings.TrimSpace(idpl), strings.TrimSpace(title), strings.TrimSpace(description), 
 			strings.TrimSpace(chtitle), strings.TrimSpace(chid), publishedat, count_metrics, max_timemetric, min_timemetric}
 	
-	log.Debugf("id: %v, idpl=%v, title=%v, description=%v, chtitle=%v, chid=%v, publishedat=%v, count_metrics=%v, max_timemetric=%v, min_timemetric=%v", 
+	log.Debugf("id: %v, idpl: %v, title: %v, description: %v, chtitle: %v, chid: %v, publishedat: %v, count_metrics: %v, max_timemetric: %v, min_timemetric: %v", 
 			id, idpl, title, description, chtitle, chid, publishedat, count_metrics, max_timemetric, min_timemetric)
 
 	return youtubeVideo, nil
@@ -307,7 +300,7 @@ func getVideosByPlayListIdFromDB(id string) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Debugf("id: %v, playlist=%v", id, string(stringVideos))
+	log.Debugf("id: %v, playlist: %v", id, string(stringVideos))
 
 	return stringVideos, nil
 }

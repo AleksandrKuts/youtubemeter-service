@@ -264,27 +264,42 @@ func getVideosByPlayListId(id string) ([]byte, error) {
 func getPlaylists(onlyEnable bool) ([]byte, error) {
 	// з кешем робимо тільки якщо він включений та це не запит адміністратора на всі плейлисти
 	if *config.EnableCache && onlyEnable {
+		log.Debugf("playlists, cache, timeUpdate: %v", listCachePlayLists.timeUpdate)
+		
 		// Дані з кешу беремо тільки якщо з останнього запиту пройшло часу менш
 		// ніж період перевірки списку плейлистів
 		if time.Since(listCachePlayLists.timeUpdate) < *config.PeriodPlayListCache {
-			log.Debugf("cache, list playlists: %v", string(listCachePlayLists.responce))
+			log.Debugf("playlists, cache, list playlists: %v", string(listCachePlayLists.responce))
 
 			return listCachePlayLists.responce, nil
 		}
+		log.Debug("playlists, cache, skip")
 	}
 
 	// В кеші актуальної інформации не знайдено, запрошуемо в БД
-	stringPlaylists, err := getPlaylistsFromDB(onlyEnable)
+	response, err := getPlaylistsFromDB(onlyEnable)
 	if err != nil {
 		return nil, err
 	}
 
+	responcePlayList := ResponcePlayList{*config.MaxViewVideosInPlayLists, response}
+	
+	// Конвертуємо відповідь в json-формат
+	stringJsonPlaylists, err := json.Marshal(&responcePlayList)
+
+	if err != nil {
+		log.Errorf("Error convert select to Playlists: response=%v, error=%v", stringJsonPlaylists, err)
+		return nil, err
+	}
+
+	log.Debugf("playlists: %v", string(stringJsonPlaylists))
+
 	// з кешем робимо тільки якщо він включений та це не запит адміністратора на всі плейлисти
 	if *config.EnableCache && onlyEnable {
 		// Додаємо запит до кешу
-		listCachePlayLists.update(stringPlaylists)
-		log.Debugf("cache, add list playlists")
+		listCachePlayLists.update(stringJsonPlaylists)
+		log.Debugf("playlists, cache, add list playlists")
 	}
 
-	return stringPlaylists, nil
+	return stringJsonPlaylists, nil
 }
