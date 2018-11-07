@@ -87,9 +87,27 @@ type Metrics struct {
 	Time time.Time `json:"mtime"`
 }
 
-// Структура для кешу відео. 
+// Структура для кешу списка плейлистів 
+type ListPlayListInCache struct {
+	// Час останнього запиту списку плейлистів
+	timeUpdate time.Time  
+	
+	// Дані по відео 
+	responce []byte
+}
+
+func (l *ListPlayListInCache) update( responce []byte) {
+	l.timeUpdate = time.Now()
+	l.responce = responce
+}
+
+func (l *ListPlayListInCache) reset() {
+	l.timeUpdate = MIN_TIME
+}
+
+// Структура для кешу плейлиста (списка відео)
 type PlayListInCache struct {
-	// Час останнього оновлення. Данні за цей період не змінюються (максимум додасться одне відео)
+	// Час останнього запиту списку відео
 	timeUpdate time.Time  
 	
 	// Дані по відео 
@@ -97,12 +115,12 @@ type PlayListInCache struct {
 }
 
 
-// Структура для кешу відео. 
+// Структура для кешу метрик та опису відео
 type VideoInCache struct {
-	// Час останнього оновлення метрик. Данні за цей період не змінюються (максимум додасться одна метрика)
+	// Час останнього запиту метрик. Данні за цей період не змінюються (максимум додасться одна метрика)
 	updateMetrics time.Time  
 
-	// Час останнього оновлення статистичних даних по відео (включає дані по метрикам див. YoutubeVideo struct). 
+	// Час останнього запиту статистичних даних по відео (включає дані по метрикам див. YoutubeVideo struct). 
 	// Данні за цей період не змінюються (максимум додасться одна метрика)
 	updateVideo time.Time
 	

@@ -71,7 +71,7 @@ func closeDB() {
 }
 
 // Додати плей-лист до БД
-func addPlayList(playlist *PlayList) error {
+func addPlayListDB(playlist *PlayList) error {
 	res, err := db.Exec(INSERT_PLAYLIST, playlist.Id, playlist.Title, playlist.Enable, playlist.Idch)
 	if err != nil {
 		log.Errorf("err=%v", err)
@@ -90,7 +90,7 @@ func addPlayList(playlist *PlayList) error {
 }
 
 // Оновити плей-лист в БД
-func updatePlayList(id string, playlist *PlayList) error {
+func updatePlayListDB(id string, playlist *PlayList) error {
 	res, err := db.Exec(UPDATE_PLAYLIST, id, playlist.Title, playlist.Enable, playlist.Idch)
 	if err != nil {
 		log.Errorf("err=%v", err)
@@ -109,7 +109,7 @@ func updatePlayList(id string, playlist *PlayList) error {
 }
 
 // Видалити плей-лист з БД
-func deletePlayList(playlistId string) error {
+func deletePlayListDB(playlistId string) error {
 	res, err := db.Exec(DELETE_PLAYLIST, playlistId)
 	if err != nil {
 		log.Errorf("err=%v", err)
@@ -131,7 +131,7 @@ func deletePlayList(playlistId string) error {
 // onlyEnable - які плейлисти вибирати
 //   true  - тільки активні, якщо плейлист не активний його треба активувати через інтерфейс адміністратора
 //   false - всі
-func getPlaylists(onlyEnable bool) ([]byte, error) {
+func getPlaylistsFromDB(onlyEnable bool) ([]byte, error) {
 	log.Debugf("dbstats=%v", db.Stats())
 
 	var rows *sql.Rows
@@ -181,22 +181,6 @@ func getPlaylists(onlyEnable bool) ([]byte, error) {
 	log.Debugf("Playlists=%v", string(stringJsonPlaylists))
 
 	return stringJsonPlaylists, nil
-}
-
-// Перевірка дати, заданої рядком мілісекунд, та її форматування
-// якщо дата не задана (пустий рядок), повертаємо пустий рядок
-// якщо задана, перевіряємо коректність та форматуємо в timestamp with time zone згідно TIME_LAYOUT
-func checkDate(sdt string) (string, error) {
-	if sdt == "" {
-		return "", nil
-	} else {
-		millis, err := strconv.ParseInt(sdt, 10, 64)
-		if err != nil {
-			log.Errorf("Error convert string date %v to timestamp", sdt)
-			return "", err
-		}
-		return time.Unix(0, millis*int64(time.Millisecond)).Format(TIME_LAYOUT), nil
-	}
 }
 
 // Отримати метрики по відео id за заданий період
@@ -326,4 +310,20 @@ func getVideosByPlayListIdFromDB(id string) ([]byte, error) {
 	log.Debugf("id: %v, playlist=%v", id, string(stringVideos))
 
 	return stringVideos, nil
+}
+
+// Перевірка дати, заданої рядком мілісекунд, та її форматування
+// якщо дата не задана (пустий рядок), повертаємо пустий рядок
+// якщо задана, перевіряємо коректність та форматуємо в timestamp with time zone згідно TIME_LAYOUT
+func checkDate(sdt string) (string, error) {
+	if sdt == "" {
+		return "", nil
+	} else {
+		millis, err := strconv.ParseInt(sdt, 10, 64)
+		if err != nil {
+			log.Errorf("Error convert string date %v to timestamp", sdt)
+			return "", err
+		}
+		return time.Unix(0, millis*int64(time.Millisecond)).Format(TIME_LAYOUT), nil
+	}
 }

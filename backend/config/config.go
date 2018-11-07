@@ -17,7 +17,8 @@ var (
 	MaxViewVideosInPlayLists = flag.Int("MaxViewVideosInPlayLists", 30, "")
 
 	EnableCache = flag.Bool("enableCache", true, "Enable cache?")
-	PeriodMeterCache = flag.Duration("periodMetricCache", time.Second * 60, "")
+	PeriodPlayListCache = flag.Duration("periodPlayListCache", time.Minute * 30, "")
+	PeriodMeterCache = flag.Duration("periodMetricCache", time.Second * 60, "")	
 	PeriodCollectionCache = flag.Duration("periodCollectCache", time.Hour * 24 * 14, "")
 	PeriodVideoCache = flag.Duration("periodVideoCache", time.Minute * 5, "")
 
@@ -103,9 +104,11 @@ func init() {
 	Logger.Debugf("ListenAdmin=%v", *ListenAdmin)
 	Logger.Debugf("Origin=%v", *Origin)
 	Logger.Debugf("MaxViewVideosInPlayLists=%v", *MaxViewVideosInPlayLists)
-	Logger.Debugf("PeriodMeter=%v", *PeriodMeterCache)
-	Logger.Debugf("PeriodСollection=%v", *PeriodCollectionCache)
+		
+	Logger.Debugf("PeriodPlayListCache=%v", *PeriodPlayListCache)
 	Logger.Debugf("PeriodVideoCache=%v", *PeriodVideoCache)
+	Logger.Debugf("PeriodMeterCache=%v", *PeriodMeterCache)
+	Logger.Debugf("PeriodСollectionCache=%v", *PeriodCollectionCache)
 
 	Logger.Debugf("EnableCache=%v", *EnableCache)
 	Logger.Debugf("MaxSizeCacheVideo=%v", *MaxSizeCacheVideo)

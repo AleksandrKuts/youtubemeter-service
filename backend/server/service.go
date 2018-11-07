@@ -14,6 +14,9 @@ var cacheVideos *lru.TwoQueueCache
 // Кеш для плейлистів
 var cachePlayLists *lru.TwoQueueCache
 
+// Кеш для списку плейлистів
+var listCachePlayLists *ListPlayListInCache
+
 var MIN_TIME = time.Time{}
 
 func init() {
@@ -29,7 +32,33 @@ func init() {
 		if err != nil {
 			log.Fatalf("err: %v", err)
 		}
+
+		listCachePlayLists = &ListPlayListInCache{MIN_TIME, nil}
 	}
+}
+
+// Додати плей-лист
+func addPlayList(playlist *PlayList) error {
+	// Список плейлистів в кеші треба буде оновити
+	listCachePlayLists.reset()
+
+	return addPlayListDB(playlist)
+}
+
+// Оновити плей-лист
+func updatePlayList(id string, playlist *PlayList) error {
+	// Список плейлистів в кеші треба буде оновити
+	listCachePlayLists.reset()
+
+	return updatePlayListDB(id, playlist)
+}
+
+// Видалити плей-лист
+func deletePlayList(playlistId string) error {
+	// Список плейлистів в кеші треба буде оновити
+	listCachePlayLists.reset()
+
+	return deletePlayListDB(playlistId)
 }
 
 // Отримати опис відео по його id
@@ -41,7 +70,8 @@ func getVideoById(id string) ([]byte, error) {
 
 	var ok bool = false
 	var videoi interface{}
-	
+
+	// з кешем робимо тільки якщо він включений
 	if *config.EnableCache {
 		videoi, ok = cacheVideos.Get(id)
 		log.Debugf("id: %v, cache, have data? %v", id, ok)
@@ -78,6 +108,7 @@ func getVideoById(id string) ([]byte, error) {
 	}
 	log.Debugf("id: %v, video=%v", id, string(stringJsonVideo))
 
+	// з кешем робимо тільки якщо він включений
 	if *config.EnableCache {
 		// Якщо дані по запиту вже в кеші, то тільки корегуємо їх
 		if ok {
@@ -129,7 +160,8 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 
 	var ok bool = false
 	var videoi interface{}
-	
+
+	// з кешем робимо тільки якщо він включений
 	if *config.EnableCache {
 		videoi, ok = cacheVideos.Get(id)
 		log.Debugf("id: %v, cache, have data? %v", id, ok)
@@ -167,6 +199,7 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 	}
 	log.Debugf("id: %v, metrics=%v", id, string(metricsVideoJson))
 
+	// з кешем робимо тільки якщо він включений
 	if *config.EnableCache {
 		// Якщо дані по запиту вже в кеші, то тільки корегуємо їх
 		if ok {
@@ -188,7 +221,8 @@ func getVideosByPlayListId(id string) ([]byte, error) {
 	if id == "" {
 		return nil, errors.New("video id is null")
 	}
-	
+
+	// з кешем робимо тільки якщо він включений
 	if *config.EnableCache {
 		playlisti, ok := cachePlayLists.Get(id)
 		log.Debugf("id: %v, cache, have data? %v", id, ok)
@@ -196,7 +230,7 @@ func getVideosByPlayListId(id string) ([]byte, error) {
 		// Перевіряємо чи є дані в кеші
 		if ok {
 			playlist := playlisti.(*PlayListInCache)
-			log.Debugf("id: %v, timeUpdate: %v", id, playlist.timeUpdate )
+			log.Debugf("id: %v, timeUpdate: %v", id, playlist.timeUpdate)
 
 			// Дані з кешу беремо тільки якщо з останнього запиту пройшло часу менш
 			// ніж період перевірки списку відео в плейлисті
@@ -209,13 +243,14 @@ func getVideosByPlayListId(id string) ([]byte, error) {
 		}
 
 	}
-	
+
 	// В кеші актуальної інформации не знайдено, запрошуемо в БД
-	stringVideos, err := getVideosByPlayListIdFromDB(id) 
+	stringVideos, err := getVideosByPlayListIdFromDB(id)
 	if err != nil {
 		return nil, err
 	}
-	
+
+	// з кешем робимо тільки якщо він включений
 	if *config.EnableCache {
 		// Додаємо запит до кешу
 		cachePlayLists.Add(id, &PlayListInCache{time.Now(), stringVideos})
@@ -223,4 +258,33 @@ func getVideosByPlayListId(id string) ([]byte, error) {
 	}
 
 	return stringVideos, nil
+}
+
+// Отримати список плейлистів
+func getPlaylists(onlyEnable bool) ([]byte, error) {
+	// з кешем робимо тільки якщо він включений та це не запит адміністратора на всі плейлисти
+	if *config.EnableCache && onlyEnable {
+		// Дані з кешу беремо тільки якщо з останнього запиту пройшло часу менш
+		// ніж період перевірки списку плейлистів
+		if time.Since(listCachePlayLists.timeUpdate) < *config.PeriodPlayListCache {
+			log.Debugf("cache, list playlists: %v", string(listCachePlayLists.responce))
+
+			return listCachePlayLists.responce, nil
+		}
+	}
+
+	// В кеші актуальної інформации не знайдено, запрошуемо в БД
+	stringPlaylists, err := getPlaylistsFromDB(onlyEnable)
+	if err != nil {
+		return nil, err
+	}
+
+	// з кешем робимо тільки якщо він включений та це не запит адміністратора на всі плейлисти
+	if *config.EnableCache && onlyEnable {
+		// Додаємо запит до кешу
+		listCachePlayLists.update(stringPlaylists)
+		log.Debugf("cache, add list playlists")
+	}
+
+	return stringPlaylists, nil
 }
