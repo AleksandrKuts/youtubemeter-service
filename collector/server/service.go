@@ -450,7 +450,7 @@ func getMetersVideosInd(idpl string, requestVideos map[string]*YoutubeVideo) {
 		videoDislikeCount := item.Statistics.DislikeCount
 		videoViewCount := item.Statistics.ViewCount
 
-		log.Debugf("id: %v, comment: %10v, like: %10v, dislike: %10v, view: %10v",
+		log.Debugf("id: %v, comment: %5v, like: %6v, dislike: %6v, view: %8v",
 			videoId,
 			videoCommentCount,
 			videoLikeCount,

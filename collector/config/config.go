@@ -98,7 +98,7 @@ func init() {
 	Logger = logger.Sugar()	
 	
 	Logger.Warnf("debug level=%v", atomicLevel)
-	Logger.Errorf("Log=%s", Log)
+	Logger.Infof("Log=%s", Log)
 	Logger.Debugf("LogError=%s", LogError)
 
 	Logger.Debugf("fileSecret=%v", *FileSecret)
