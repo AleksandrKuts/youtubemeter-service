@@ -391,7 +391,7 @@ func getRequestVideosFromPlayList(playList *YoutubePlayList) ([]map[string]*Yout
 			}
 		
 			// обробляємо тільки дозволену кількість id відео. Запрос ділимо на частини
-			if count >= *config.MaxReqestCountVideoID {
+			if count >= *config.MaxRequestCountVideoID {
 				requestVideos = make(map[string]*YoutubeVideo)
 				mRequestVideos = append(mRequestVideos, requestVideos)
 				count = 0;
@@ -403,7 +403,7 @@ func getRequestVideosFromPlayList(playList *YoutubePlayList) ([]map[string]*Yout
 		}
 	}
 	
-	log.Debugf("video: all: %v, request: %v %v", len(playList.videos), countall, mRequestVideos)
+	log.Debugf("video: all: %v, request: %v", len(playList.videos), countall)
 	
 	return mRequestVideos
 }

@@ -26,7 +26,7 @@ var (
 	PeriodCount = flag.Duration("periodSaveMetricIdle", time.Hour * 1, "")
 	PeriodDeleted = flag.Duration("periodFinalDeletion", time.Hour * 24, "")
 	PeriodСollection = flag.Duration("periodCollect", time.Hour * 24 * 14, "")
-	MaxReqestCountVideoID = flag.Int("maxReqestCountVideoID", 50, "")
+	MaxRequestCountVideoID = flag.Int("maxRequestCountVideoID", 50, "")
 	
 	DBHost = flag.String("dbhost", "localhost", "")
 	DBPort = flag.String("dbport", "5432", "")
@@ -89,8 +89,8 @@ func init() {
 		},
 	}
 
-	if *MaxReqestCountVideoID < 1 && *MaxReqestCountVideoID > 50 {
-		*MaxReqestCountVideoID = 50
+	if *MaxRequestCountVideoID < 1 && *MaxRequestCountVideoID > 50 {
+		*MaxRequestCountVideoID = 50
 	}
 
 	logger, _ := cfg.Build()
@@ -110,7 +110,7 @@ func init() {
 	Logger.Debugf("PeriodCount=%v", *PeriodCount)
 	Logger.Debugf("PeriodDeleted=%v", *PeriodDeleted)
 	Logger.Debugf("PeriodСollection=%v", *PeriodСollection)
-	Logger.Debugf("MaxReqestCountVideoID=%v", *MaxReqestCountVideoID)
+	Logger.Debugf("MaxReqestCountVideoID=%v", *MaxRequestCountVideoID)
 
 	Logger.Debugf("dbhost=%s", *DBHost)
 	Logger.Debugf("dbport=%s", *DBPort)
