@@ -26,6 +26,7 @@ var (
 	PeriodCount = flag.Duration("periodSaveMetricIdle", time.Hour * 1, "")
 	PeriodDeleted = flag.Duration("periodFinalDeletion", time.Hour * 24, "")
 	PeriodСollection = flag.Duration("periodCollect", time.Hour * 24 * 14, "")
+	MaxReqestCountVideoID = flag.Int("maxReqestCountVideoID", 50, "")
 	
 	DBHost = flag.String("dbhost", "localhost", "")
 	DBPort = flag.String("dbport", "5432", "")
@@ -73,7 +74,7 @@ func init() {
 		Encoding:         "console",
 		Level:            zap.NewAtomicLevelAt(atomicLevel),
 		OutputPaths:      strings.Split( *Log, ","),
-		ErrorOutputPaths: strings.Split( *Log, ","),
+		ErrorOutputPaths: strings.Split( *LogError, ","),
 		EncoderConfig: zapcore.EncoderConfig{
 			MessageKey: "message",
 
@@ -88,12 +89,16 @@ func init() {
 		},
 	}
 
+	if *MaxReqestCountVideoID < 1 && *MaxReqestCountVideoID > 50 {
+		*MaxReqestCountVideoID = 50
+	}
+
 	logger, _ := cfg.Build()
 	defer logger.Sync() // flushes buffer, if any
 	Logger = logger.Sugar()	
 	
 	Logger.Warnf("debug level=%v", atomicLevel)
-	Logger.Debugf("Log=%s", Log)
+	Logger.Errorf("Log=%s", Log)
 	Logger.Debugf("LogError=%s", LogError)
 
 	Logger.Debugf("fileSecret=%v", *FileSecret)
@@ -105,6 +110,7 @@ func init() {
 	Logger.Debugf("PeriodCount=%v", *PeriodCount)
 	Logger.Debugf("PeriodDeleted=%v", *PeriodDeleted)
 	Logger.Debugf("PeriodСollection=%v", *PeriodСollection)
+	Logger.Debugf("MaxReqestCountVideoID=%v", *MaxReqestCountVideoID)
 
 	Logger.Debugf("dbhost=%s", *DBHost)
 	Logger.Debugf("dbport=%s", *DBPort)

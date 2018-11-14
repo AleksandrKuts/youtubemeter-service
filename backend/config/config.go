@@ -75,7 +75,7 @@ func init() {
 		Encoding:         "console",
 		Level:            zap.NewAtomicLevelAt(atomicLevel),
 		OutputPaths:      strings.Split( *Log, ","),
-		ErrorOutputPaths: strings.Split( *Log, ","),
+		ErrorOutputPaths: strings.Split( *LogError, ","),
 		EncoderConfig: zapcore.EncoderConfig{
 			MessageKey: "message",
 

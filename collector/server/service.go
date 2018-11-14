@@ -281,6 +281,8 @@ func checkVideosByPlaylistId(playListId string, playList *YoutubePlayList) {
 			addVideo(playListId, playList, videoId, item)
 		}
 	}
+	
+	log.Debugf("id: %v, all videos: %v", playListId, len(playList.videos))
 }
 
 // Перевіряє ПлейЛист чи не настав час (задається через config.PeriodСollection) припинити обробку якихось відео
@@ -289,9 +291,12 @@ func checkVideosByPlaylistId(playListId string, playList *YoutubePlayList) {
 func checkElapsedVideos(playList *YoutubePlayList) {
 	playList.mux.Lock()
 	defer playList.mux.Unlock()
+	
+	countDeleted := 0;
 	for id, video := range playList.videos {
 
 		if video.deleted { // якщо відео призначене для видалення
+			countDeleted++;
 			if time.Since(video.timeDeleted) > *config.PeriodDeleted { // перевіряємо, чи не час видаляти
 				playList.delete(id) // видалення
 				log.Infof("id: %v, stop processing video", id)
@@ -305,6 +310,7 @@ func checkElapsedVideos(playList *YoutubePlayList) {
 
 		}
 	}
+	log.Debugf("videos: count: %v, deleted: %v", len(playList.videos), countDeleted)
 }
 
 // додаємо відео для збору статистики
@@ -360,36 +366,71 @@ func getMeters() {
 // Отримати тимчасовий список відео для роботи з сервісами Youtube. Цей тимчасовий список потрібен щоб не
 // блокувати надовго роботу з основним списком, в якій можуть додати, або видалити відео
 // Відео помічені на видалення ігноруються
-func getRequestVideosFromPlayList(playList *YoutubePlayList) (string, map[string]*YoutubeVideo) {
-	requestVideos := make(map[string]*YoutubeVideo)
+func getRequestVideosFromPlayList(playList *YoutubePlayList) ([]map[string]*YoutubeVideo) {
+	mRequestVideos := []map[string]*YoutubeVideo{}
+	
+	var requestVideos map[string]*YoutubeVideo
+	requestVideos = make(map[string]*YoutubeVideo)
+	
+	mRequestVideos = append(mRequestVideos, requestVideos)
 
 	// блокування потрібно щоб гарантовано не почати обробляти PlayList якій видалений, чи деактивований
 	playList.mux.Lock()
 	defer playList.mux.Unlock()
 
-	var bIds bytes.Buffer
-	var isFirst = true
-
+	count := 0
+	countall := 0
 	for id, video := range playList.videos {
 		if !video.deleted { // додаються тільки робочі плейлисти
+			// Таке відео повинно бути видалене
+			timeElapsed := time.Since(video.PublishedAt)
+			if timeElapsed > *config.PeriodСollection {
+				log.Errorf("id: %v, video deleted but works, timeElapsed: %v, published: %v", id, timeElapsed, 
+					video.PublishedAt) 
+				continue;
+			}
+		
+			// обробляємо тільки дозволену кількість id відео. Запрос ділимо на частини
+			if count >= *config.MaxReqestCountVideoID {
+				requestVideos = make(map[string]*YoutubeVideo)
+				mRequestVideos = append(mRequestVideos, requestVideos)
+				count = 0;
+			}		
+			requestVideos[id] = video
+					
+			count++;
+			countall++;
+		}
+	}
+	
+	log.Debugf("video: all: %v, request: %v %v", len(playList.videos), countall, mRequestVideos)
+	
+	return mRequestVideos
+}
+
+func getMetersVideos(id string, playList *YoutubePlayList) {
+	mRrequestVideos := getRequestVideosFromPlayList(playList)
+
+	for i := 0; i < len(mRrequestVideos); i++ {
+		getMetersVideosInd(id, mRrequestVideos[i])
+	} 	
+}
+
+func getMetersVideosInd(idpl string, requestVideos map[string]*YoutubeVideo) {
+	log.Debugf("id: %v, getMetersVideo", idpl)
+
+	// Формуємо стрічку з id подилену комами
+	var bIds bytes.Buffer
+	var isFirst = true
+	for id, _ := range requestVideos {
 			if isFirst {
 				isFirst = false
 			} else {
 				bIds.WriteString(",")
 			}
 			bIds.WriteString(id)
-
-			requestVideos[id] = video
-		}
 	}
-
-	return bIds.String(), requestVideos
-}
-
-func getMetersVideos(id string, playList *YoutubePlayList) {
-	log.Debugf("getMetersVideo")
-
-	ids, requestVideos := getRequestVideosFromPlayList(playList)
+	ids := bIds.String();
 
 	call := service.Videos.List(VIDEOS_PART)
 	call = call.Id(ids)
@@ -439,6 +480,6 @@ func getMetersVideos(id string, playList *YoutubePlayList) {
 
 	if len(metrics) > 0 {
 		database.AddMetric(metrics)
-		log.Infof("id: %v, save metrics video for playlist", id)
+		log.Infof("id: %v, save metrics video for playlist", idpl)
 	}
 }
