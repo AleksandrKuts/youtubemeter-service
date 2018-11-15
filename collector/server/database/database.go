@@ -139,7 +139,8 @@ func AddVideo(id, idpl string, publishedat time.Time, title, description, channe
 		log.Errorf("err=%v", err)
 		return err
 	} else {
-		log.Debugf("insert video: id=%v, idpl=%v, publishedat=%v, title=%v, description=%v, channelId=%v, channelTitle=%v", id, idpl, publishedat, title, description, channelTitle, channelId)
+		log.Debugf("insert video: id=%v, idpl=%v, publishedat=%v, title=%v, channelId=%v, channelTitle=%v", id, idpl, 
+			publishedat, title, channelTitle, channelId)
 	}
 
 	return nil
@@ -154,14 +155,16 @@ func AddMetric(metrics []*Metrics) error {
 		return err
 	}
 
-	stmt, err := txn.Prepare(pq.CopyIn("metric", "idvideo", "commentcount", "likecount", "dislikecount", "viewcount", "timemetric"))
+	stmt, err := txn.Prepare(pq.CopyIn("metric", "idvideo", "commentcount", "likecount", "dislikecount", "viewcount", 
+			"timemetric"))
 	if err != nil {
 		log.Errorf("err=%v", err)
 		return err
 	}
 
 	for _, metric := range metrics {
-		_, err = stmt.Exec(metric.Id, metric.CommentCount, metric.LikeCount, metric.DislikeCount, metric.ViewCount, metric.Time)
+		_, err = stmt.Exec(metric.Id, metric.CommentCount, metric.LikeCount, metric.DislikeCount, metric.ViewCount, 
+			metric.Time)
 		if err != nil {
 			log.Errorf("err=%v", err)
 			return err

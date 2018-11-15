@@ -13,5 +13,5 @@ var (
 
 func main() {
 	fmt.Printf("version: %s.%s\n", versionMajor, version)
-	server.StartService()
+	server.StartService(versionMajor, version)
 }

@@ -21,7 +21,8 @@ func init() {
 	log = config.Logger
 }
 
-func Start() {
+func StartService(versionMajor, versionMin string) {
+	log.Warnf("server start, version: %s.%s\n", versionMajor, versionMin)
 	log.Debugf("port=%s", *config.Addr)
 
 	r := newRouter()

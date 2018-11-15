@@ -14,6 +14,7 @@ var (
 	debugLevel = flag.String("debugLevel", "info", "")
 	Log = flag.String("Log", "collector.log", "")
 	LogError = flag.String("LogError", "collector_error.log", "")
+	LogTimeFormat = flag.String("LogTimeFormat", "02-01-2006 15:04:05", "")
 
 	FileSecret = flag.String("fileToken", "client_secret.json", "")
 	CredentialFile = flag.String("fileCredential", "yotubemetric_credential.json", "")
@@ -26,6 +27,7 @@ var (
 	PeriodCount = flag.Duration("periodSaveMetricIdle", time.Hour * 1, "")
 	PeriodDeleted = flag.Duration("periodFinalDeletion", time.Hour * 24, "")
 	PeriodСollection = flag.Duration("periodCollect", time.Hour * 24 * 14, "")
+	MaxRequestVideos = flag.Int64("maxRequestVideos", 20, "")
 	MaxRequestCountVideoID = flag.Int("maxRequestCountVideoID", 50, "")
 	
 	DBHost = flag.String("dbhost", "localhost", "")
@@ -39,7 +41,7 @@ var (
 )
 
 func myTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-	enc.AppendString(t.Format("02-01-2006 15:04:05"))
+	enc.AppendString(t.Format(*LogTimeFormat))
 }
 
 func init() {
@@ -100,6 +102,7 @@ func init() {
 	Logger.Warnf("debug level=%v", atomicLevel)
 	Logger.Infof("Log=%s", Log)
 	Logger.Debugf("LogError=%s", LogError)
+	Logger.Debugf("LogTimeFormat=%s", LogTimeFormat)
 
 	Logger.Debugf("fileSecret=%v", *FileSecret)
 	Logger.Debugf("timeout=%s", *Timeout)
@@ -110,6 +113,7 @@ func init() {
 	Logger.Debugf("PeriodCount=%v", *PeriodCount)
 	Logger.Debugf("PeriodDeleted=%v", *PeriodDeleted)
 	Logger.Debugf("PeriodСollection=%v", *PeriodСollection)
+	Logger.Debugf("MaxRequestVideos=%v", *MaxRequestVideos)
 	Logger.Debugf("MaxReqestCountVideoID=%v", *MaxRequestCountVideoID)
 
 	Logger.Debugf("dbhost=%s", *DBHost)
