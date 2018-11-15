@@ -372,7 +372,7 @@ func getMetersVideos(playList *YoutubePlayList) {
 			getMetersVideosInd(playList.id, mRrequestVideos[i])
 		} 	
 	} else {
-		log.Debugf("pl: %v, skip ass the count request's videos is 0", playList.id)
+		log.Debugf("pl: %v, skip since the number of videos 0", playList.id)
 		return
 	}
 }
