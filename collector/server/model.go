@@ -49,6 +49,8 @@ func (video *YoutubeVideo) setMetrics(CommentCount, LikeCount, DislikeCount, Vie
 
 
 type YoutubePlayList struct {
+	id string
+	
 	// Video: A list video resource represents a YouTube video.
 	videos map[string]*YoutubeVideo
 	
@@ -97,7 +99,7 @@ func (playlists *YoutubePlayLists) delete(id string) {
 }
 
 func (playlists *YoutubePlayLists) append(id string) {	
-	v := YoutubePlayList{videos: make(map[string]*YoutubeVideo), deleted: false }
+	v := YoutubePlayList{videos: make(map[string]*YoutubeVideo), deleted: false, id: id }
 	playlists.playlists[id] = &v  	
 }
 
