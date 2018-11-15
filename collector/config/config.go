@@ -100,12 +100,12 @@ func init() {
 	Logger = logger.Sugar()	
 	
 	Logger.Warnf("debug level=%v", atomicLevel)
-	Logger.Infof("Log=%s", Log)
-	Logger.Debugf("LogError=%s", LogError)
-	Logger.Debugf("LogTimeFormat=%s", LogTimeFormat)
+	Logger.Errorf("Log=%v", Log)
+	Logger.Debugf("LogError=%v", LogError)
+	Logger.Debugf("LogTimeFormat=%v", LogTimeFormat)
 
 	Logger.Debugf("fileSecret=%v", *FileSecret)
-	Logger.Debugf("timeout=%s", *Timeout)
+	Logger.Debugf("timeout=%v", *Timeout)
 	
 	Logger.Debugf("PeriodPlayList=%v", *PeriodPlayList)
 	Logger.Debugf("PeriodVideo=%v", *PeriodVideo)

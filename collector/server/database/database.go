@@ -3,42 +3,25 @@ package database
 import (
 	"database/sql"
 	"errors"
-	"github.com/lib/pq"
 	"github.com/AleksandrKuts/youtubemeter-service/collector/config"
+	"github.com/AleksandrKuts/youtubemeter-service/collector/server/model"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 	"strings"
 	"time"
 )
-
-
-// Video: A video resource represents a YouTube video.
-type Metrics struct {
-	//The id parameter specifies a comma-separated list of the YouTube video ID(s)
-	Id string `json:"id"`
-
-	// CommentCount: The number of comments for the video.
-	CommentCount uint64 `json:"commentCount,omitempty,string"`
-
-	// LikeCount: The number of users who have indicated that they liked the
-	// video by giving it a positive rating.
-	LikeCount uint64 `json:"likeCount,omitempty,string"`
-
-	// DislikeCount: The number of users who have indicated that they
-	// disliked the video by giving it a negative rating.
-	DislikeCount uint64 `json:"dislikeCount,omitempty,string"`
-
-	// ViewCount: The number of times the video has been viewed.
-	ViewCount uint64 `json:"viewCount,omitempty,string"`
-
-	// Last poll time to get metrics
-	Time time.Time
-}
 
 // The layout defines the format by showing how the reference time, defined to be.
 // timestamp with time zone;
 const TIME_LAYOUT = "2006-01-02T15:04:05.999999-07:00"
 
 const GET_PLAYLISTS = "SELECT pl.id FROM playlist pl WHERE pl.enable = true"
+
+const GET_PLAYLISTS_WITH_VIDEO = "SELECT pl.id, v.id as vid, v.publishedat, v.title " +
+	"FROM playlist pl " +
+	"LEFT JOIN video v ON v.idpl = pl.id AND v.publishedat > $1 " +
+	"WHERE pl.enable = true " +
+	"ORDER BY pl.id"
 
 const INSERT_VIDEO = "INSERT INTO video ( id, idpl, publishedat, title, description, chid, chtitle ) " +
 	"VALUES ( $1, $2, $3, $4, $5, $6, $7 ) " +
@@ -87,6 +70,49 @@ func closeDB() {
 	if err != nil {
 		log.Errorf("error close database: %v", err)
 	}
+}
+
+// Отримати массив ID списків відтворення та відео з БД 
+func GetPlaylistWithVideo() (model.YoutubePlayLists, error) {
+	log.Debugf("dbstats=%v", db.Stats())
+	maxTimePublished := time.Now().Add(-*config.PeriodСollection)
+	log.Debugf("get playlists with videos, maxTimePublished: %v", maxTimePublished)
+
+	var playlists model.YoutubePlayLists = model.YoutubePlayLists{Playlists: make(map[string]*model.YoutubePlayList)}
+
+	rows, err := db.Query(GET_PLAYLISTS_WITH_VIDEO, maxTimePublished)
+	if err != nil {
+		log.Errorf("Error get playlists: %v", err)
+		return playlists, err
+	}
+	defer rows.Close()
+
+	pl := ""
+	for rows.Next() {
+		var id string
+		var videoId string
+		var publishedat time.Time
+		var title string
+
+		rows.Scan(&id, &videoId, &publishedat, &title)
+//		log.Debugf("pl: %v, video: %v, publishedat: %v, title: %v", id, videoId, publishedat, title)
+
+		if pl != id {
+			playlists.Append(id)
+			pl = id
+		}
+		if videoId != "" {
+			playlists.Playlists[id].Append(videoId, &model.YoutubeVideo{PublishedAt: publishedat,
+				Title: title, Deleted: false})
+		}
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Error(err)
+		return playlists, err
+	}
+
+	return playlists, nil
 }
 
 // Отримати массив ID списків відтворення
@@ -139,7 +165,7 @@ func AddVideo(id, idpl string, publishedat time.Time, title, description, channe
 		log.Errorf("err=%v", err)
 		return err
 	} else {
-		log.Debugf("insert video: id=%v, idpl=%v, publishedat=%v, title=%v, channelId=%v, channelTitle=%v", id, idpl, 
+		log.Debugf("insert video: id=%v, idpl=%v, publishedat=%v, title=%v, channelId=%v, channelTitle=%v", id, idpl,
 			publishedat, title, channelTitle, channelId)
 	}
 
@@ -147,7 +173,7 @@ func AddVideo(id, idpl string, publishedat time.Time, title, description, channe
 }
 
 // Додати метрики
-func AddMetric(metrics []*Metrics) error {
+func AddMetric(metrics []*model.Metrics) error {
 
 	txn, err := db.Begin()
 	if err != nil {
@@ -155,15 +181,15 @@ func AddMetric(metrics []*Metrics) error {
 		return err
 	}
 
-	stmt, err := txn.Prepare(pq.CopyIn("metric", "idvideo", "commentcount", "likecount", "dislikecount", "viewcount", 
-			"timemetric"))
+	stmt, err := txn.Prepare(pq.CopyIn("metric", "idvideo", "commentcount", "likecount", "dislikecount", "viewcount",
+		"timemetric"))
 	if err != nil {
 		log.Errorf("err=%v", err)
 		return err
 	}
 
 	for _, metric := range metrics {
-		_, err = stmt.Exec(metric.Id, metric.CommentCount, metric.LikeCount, metric.DislikeCount, metric.ViewCount, 
+		_, err = stmt.Exec(metric.Id, metric.CommentCount, metric.LikeCount, metric.DislikeCount, metric.ViewCount,
 			metric.Time)
 		if err != nil {
 			log.Errorf("err=%v", err)
