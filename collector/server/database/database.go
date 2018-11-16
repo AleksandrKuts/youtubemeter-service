@@ -17,7 +17,7 @@ const TIME_LAYOUT = "2006-01-02T15:04:05.999999-07:00"
 
 const GET_PLAYLISTS = "SELECT pl.id FROM playlist pl WHERE pl.enable = true"
 
-const GET_PLAYLISTS_WITH_VIDEO = "SELECT pl.id, v.id as vid, v.publishedat, v.title " +
+const GET_PLAYLISTS_WITH_VIDEO = "SELECT pl.id, v.id as vid, v.publishedat " +
 	"FROM playlist pl " +
 	"LEFT JOIN video v ON v.idpl = pl.id AND v.publishedat > $1 " +
 	"WHERE pl.enable = true " +
@@ -92,18 +92,16 @@ func GetPlaylistWithVideo() (model.YoutubePlayLists, error) {
 		var id string
 		var videoId string
 		var publishedat time.Time
-		var title string
 
-		rows.Scan(&id, &videoId, &publishedat, &title)
-//		log.Debugf("pl: %v, video: %v, publishedat: %v, title: %v", id, videoId, publishedat, title)
+		rows.Scan(&id, &videoId, &publishedat)
+		log.Debugf("pl: %v, video: %v, publishedat: %v", id, videoId, publishedat)
 
 		if pl != id {
 			playlists.Append(id)
 			pl = id
 		}
 		if videoId != "" {
-			playlists.Playlists[id].Append(videoId, &model.YoutubeVideo{PublishedAt: publishedat,
-				Title: title, Deleted: false})
+			playlists.Playlists[id].Append(videoId, &model.YoutubeVideo{PublishedAt: publishedat, Deleted: false})
 		}
 	}
 	err = rows.Err()

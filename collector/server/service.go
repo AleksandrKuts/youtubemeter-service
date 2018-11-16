@@ -56,8 +56,6 @@ func init() {
 }
 
 func StartService(versionMajor, versionMin string) {
-	return
-	
 	log.Warnf("server start, version: %s.%s\n", versionMajor, versionMin)
 
 	initPlayLists()
@@ -307,7 +305,7 @@ func checkVideosByPlaylistId(playList *model.YoutubePlayList) {
 			addVideo(playList, videoId, item)
 		}
 	}
-	log.Debugf("pl: %v, check video end,  count videos: %v", playList.Id, len(playList.Videos))
+	log.Infof("pl: %v, count videos: %v", playList.Id, len(playList.Videos))
 }
 
 // Перевіряє ПлейЛист чи не настав час (задається через config.PeriodСollection) припинити обробку якихось відео
@@ -335,7 +333,7 @@ func checkElapsedVideos(playList *model.YoutubePlayList) {
 
 		}
 	}
-	log.Infof("pl: %v, check video elaps, count videos: %v, deleted videos: %v", playList.Id, len(playList.Videos),
+	log.Infof("pl: %v, count videos - all: %v, stopped: %v", playList.Id, len(playList.Videos),
 		countDeleted)
 }
 
@@ -396,7 +394,7 @@ func getMetersVideos(playList *model.YoutubePlayList) {
 			getMetersVideosInd(playList.Id, mRrequestVideos[i])
 		}
 	} else {
-		log.Debugf("pl: %v, skip since the number of videos 0", playList.Id)
+		log.Infof("pl: %v, SKIP - count videos 0", playList.Id)
 		return
 	}
 }
