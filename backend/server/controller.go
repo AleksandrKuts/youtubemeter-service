@@ -358,9 +358,16 @@ func getVideoByIdPlayListHandler(w http.ResponseWriter, r *http.Request) {
 
 	q := r.URL.Query()
 	req := q.Get("req")
-	log.Debugf("req=%v(%v), id=%v", req, formatStringDate(req), id)
+	skip := q.Get("skip")
 
-	videosJson, err := getVideosByPlayListId(id)
+	offset, err := strconv.Atoi(skip)
+	if err != nil {
+		offset = 0
+	}
+
+	log.Debugf("req=%v(%v), id=%v, offset=%v", req, formatStringDate(req), id, offset)
+
+	videosJson, err := getVideosByPlayListId(id, offset)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

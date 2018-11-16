@@ -20,6 +20,8 @@ type PlayList struct {
 	
 	// The date and time that the item was added to the list PlayLists
 	Timeadd time.Time `json:"timeadd"`
+	
+	Countvideo int `json:"countvideo"`
 }
 
 type ResponcePlayList struct {

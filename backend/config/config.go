@@ -94,13 +94,13 @@ func init() {
 	defer logger.Sync() // flushes buffer, if any	
 	Logger = logger.Sugar()
 
-	Logger.Warnf("debug level=%s", atomicLevel)
-	Logger.Debugf("Log=%s", Log)
-	Logger.Debugf("LogError=%s", LogError)
-	Logger.Debugf("LogTimeFormat=%s", LogTimeFormat)
+	Logger.Warnf("debug level=%v", atomicLevel)
+	Logger.Debugf("Log=%v", Log)
+	Logger.Debugf("LogError=%v", LogError)
+	Logger.Debugf("LogTimeFormat=%v", LogTimeFormat)
 	
-	Logger.Debugf("addr=%s", *Addr)
-	Logger.Debugf("timeout=%s", *Timeout)
+	Logger.Debugf("addr=%v", *Addr)
+	Logger.Debugf("timeout=%v", *Timeout)
 	Logger.Debugf("ListenAdmin=%v", *ListenAdmin)
 	Logger.Debugf("Origin=%v", *Origin)
 	Logger.Debugf("MaxViewVideosInPlayLists=%v", *MaxViewVideosInPlayLists)

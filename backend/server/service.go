@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"strconv"
 	"errors"
 	"github.com/AleksandrKuts/youtubemeter-service/backend/config"
 	"github.com/hashicorp/golang-lru"
@@ -217,35 +218,37 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 }
 
 // Отримати список відео по id плейлиста
-func getVideosByPlayListId(id string) ([]byte, error) {
+func getVideosByPlayListId(id string, offset int) ([]byte, error) {
 	if id == "" {
 		return nil, errors.New("video id is null")
 	}
 
+	cacheId := id + "_" + strconv.Itoa(offset)
+
 	// з кешем робимо тільки якщо він включений
 	if *config.EnableCache {
-		playlisti, ok := cachePlayLists.Get(id)
-		log.Debugf("id: %v, cache, have data? %v", id, ok)
+		playlisti, ok := cachePlayLists.Get(cacheId)
+		log.Debugf("id: %v, cache, have data? %v", cacheId, ok)
 
 		// Перевіряємо чи є дані в кеші
 		if ok {
 			playlist := playlisti.(*PlayListInCache)
-			log.Debugf("id: %v, timeUpdate: %v", id, playlist.timeUpdate)
+			log.Debugf("id: %v, timeUpdate: %v", cacheId, playlist.timeUpdate)
 
 			// Дані з кешу беремо тільки якщо з останнього запиту пройшло часу менш
 			// ніж період перевірки списку відео в плейлисті
 			if time.Since(playlist.timeUpdate) < *config.PeriodVideoCache {
-				log.Debugf("id: %v, cache, playlist: %v", id, string(playlist.responce))
+				log.Debugf("id: %v, cache, playlist: %v", cacheId, string(playlist.responce))
 
 				return playlist.responce, nil
 			}
-			log.Debugf("id: %v, cache, skip", id)
+			log.Debugf("id: %v, cache, skip", cacheId)
 		}
 
 	}
 
 	// В кеші актуальної інформации не знайдено, запрошуемо в БД
-	stringVideos, err := getVideosByPlayListIdFromDB(id)
+	stringVideos, err := getVideosByPlayListIdFromDB(id, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -253,8 +256,8 @@ func getVideosByPlayListId(id string) ([]byte, error) {
 	// з кешем робимо тільки якщо він включений
 	if *config.EnableCache {
 		// Додаємо запит до кешу
-		cachePlayLists.Add(id, &PlayListInCache{time.Now(), stringVideos})
-		log.Debugf("id: %v, cache, add playlists", id)
+		cachePlayLists.Add(cacheId, &PlayListInCache{time.Now(), stringVideos})
+		log.Debugf("id: %v, cache, add playlists", cacheId)
 	}
 
 	return stringVideos, nil

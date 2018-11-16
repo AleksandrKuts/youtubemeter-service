@@ -18,14 +18,15 @@ const TIME_LAYOUT = "2006-01-02T15:04:05.999999-07:00"
 const INSERT_PLAYLIST = "INSERT INTO playlist ( id, title, enable, idch ) VALUES ( $1, $2, $3, $4)"
 const UPDATE_PLAYLIST = "UPDATE playlist SET title=$2, enable=$3, idch=$4 WHERE id = $1"
 const DELETE_PLAYLIST = "DELETE FROM playlist WHERE id = $1"
-const GET_PLAYLISTS = "SELECT id, TRIM(title), enable, idch, timeadd FROM playlist ORDER BY title"
-const GET_PLAYLISTS_ENABLE = "SELECT id, TRIM(title), enable, idch, timeadd FROM playlist WHERE enable = true ORDER BY title"
+const GET_PLAYLISTS = "SELECT id, TRIM(title), enable, idch, timeadd, countvideo FROM playlist ORDER BY title"
+const GET_PLAYLISTS_ENABLE = "SELECT id, TRIM(title), enable, idch, timeadd, countvideo FROM playlist " +
+	"WHERE enable = true ORDER BY title"
 const GET_METRICS_BY_IDVIDEO = "Select * FROM return_metrics($1)"
 const GET_METRICS_BY_IDVIDEO_BETWEEN_DATE = "Select * FROM return_metrics($1, $2, $3)"
 
 const GET_VIDEO_BY_ID = "SELECT * FROM return_video($1)"
 const GET_VIDEOS_BY_ID_PLAYLIST = "SELECT id, TRIM(title), publishedat FROM video WHERE idpl = $1 " +
-	" ORDER BY publishedat DESC LIMIT $2"
+	" ORDER BY publishedat DESC LIMIT $2 OFFSET $3"
 
 // creat connections string
 // example: host=127.0.0.100 port=5432 dbname=base1 user=user1 password=lalala sslmode=disable"
@@ -157,13 +158,14 @@ func getPlaylistsFromDB(onlyEnable bool) ([]PlayList, error) {
 		var Enable bool
 		var Idch string
 		var Timeadd time.Time
+		var countvideo int
 
-		rows.Scan(&Id, &Title, &Enable, &Idch, &Timeadd)
+		rows.Scan(&Id, &Title, &Enable, &Idch, &Timeadd, &countvideo)
 		Id = strings.TrimSpace(Id)
 		Title = strings.TrimSpace(Title)
 		Idch = strings.TrimSpace(Idch)
 
-		response = append(response, PlayList{Id, Title, Enable, Idch, Timeadd})
+		response = append(response, PlayList{Id, Title, Enable, Idch, Timeadd, countvideo})
 	}
 	err = rows.Err()
 	if err != nil {
@@ -262,12 +264,12 @@ func getVideoByIdFromDB(id string) ( *YoutubeVideo, error) {
 }
 
 // Отримати список відео по id плейлиста
-func getVideosByPlayListIdFromDB(id string) ([]byte, error) {
+func getVideosByPlayListIdFromDB(id string, offset int) ([]byte, error) {
 	if id == "" {
 		return nil, errors.New("video id is null")
 	}
 
-	rows, err := db.Query(GET_VIDEOS_BY_ID_PLAYLIST, id, *config.MaxViewVideosInPlayLists)
+	rows, err := db.Query(GET_VIDEOS_BY_ID_PLAYLIST, id, *config.MaxViewVideosInPlayLists, offset)
 
 	if err != nil {
 		log.Errorf("Error get videos by plailist id: %v", err)
