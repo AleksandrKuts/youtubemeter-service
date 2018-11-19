@@ -300,9 +300,20 @@ func checkVideosByPlaylistId(playList *model.YoutubePlayList) {
 		videoId := item.ContentDetails.VideoId
 		log.Debugf("pl: %v, video: %v, is new?", playList.Id, videoId)
 
-		_, ok := playList.Videos[videoId]
+		video, ok := playList.Videos[videoId]
 		if ok == false { // такого відео ще нема, пробуємо додати
 			addVideo(playList, videoId, item)
+		} else {
+			// Відео змінило опис
+			if video.Title != item.Snippet.Title {
+				err = database.UpdateVideo(videoId, item.Snippet.Title)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+				log.Debugf("pl: %v, video: %v, update title %v ---> %v?", playList.Id, videoId, video.Title, item.Snippet.Title)
+				video.Title = item.Snippet.Title
+			}
 		}
 	}
 	log.Infof("pl: %v, count videos: %v", playList.Id, len(playList.Videos))

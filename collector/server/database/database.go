@@ -17,7 +17,7 @@ const TIME_LAYOUT = "2006-01-02T15:04:05.999999-07:00"
 
 const GET_PLAYLISTS = "SELECT pl.id FROM playlist pl WHERE pl.enable = true"
 
-const GET_PLAYLISTS_WITH_VIDEO = "SELECT pl.id, v.id as vid, v.publishedat " +
+const GET_PLAYLISTS_WITH_VIDEO = "SELECT pl.id, v.id as vid, v.publishedat, TRIM(v.title) " +
 	"FROM playlist pl " +
 	"LEFT JOIN video v ON v.idpl = pl.id AND v.publishedat > $1 " +
 	"WHERE pl.enable = true " +
@@ -28,6 +28,8 @@ const INSERT_VIDEO = "INSERT INTO video ( id, idpl, publishedat, title, descript
 	"ON CONFLICT (id) DO UPDATE SET " +
 	"publishedat = EXCLUDED.publishedat, title = EXCLUDED.title, description = EXCLUDED.description, " +
 	"chid = EXCLUDED.chid, chtitle = EXCLUDED.chtitle"
+
+const UPDATE_VIDEO = "UPDATE video SET title = $1 WHERE id = $2"
 
 const INSERT_METRICS = "INSERT INTO metric ( idVideo, CommentCount, LikeCount, DislikeCount, ViewCount ) " +
 	"VALUES ( $1, $2, $3, $4, $5 )"
@@ -92,16 +94,18 @@ func GetPlaylistWithVideo() (model.YoutubePlayLists, error) {
 		var id string
 		var videoId string
 		var publishedat time.Time
+		var title string
 
-		rows.Scan(&id, &videoId, &publishedat)
-		log.Debugf("pl: %v, video: %v, publishedat: %v", id, videoId, publishedat)
+		rows.Scan(&id, &videoId, &publishedat, &title)
+		log.Debugf("pl: %v, video: %v, publishedat: %v, title: %v", id, videoId, publishedat, title)
 
 		if pl != id {
 			playlists.Append(id)
 			pl = id
 		}
 		if videoId != "" {
-			playlists.Playlists[id].Append(videoId, &model.YoutubeVideo{PublishedAt: publishedat, Deleted: false})
+			playlists.Playlists[id].Append(videoId, &model.YoutubeVideo{PublishedAt: publishedat, 
+					Deleted: false, Title: title})
 		}
 	}
 	err = rows.Err()
@@ -169,6 +173,30 @@ func AddVideo(id, idpl string, publishedat time.Time, title, description, channe
 
 	return nil
 }
+
+// Оновити опис відео
+func UpdateVideo(id, title string) error {
+	if id == "" {
+		return errors.New("Error update video, id is null")
+	}
+
+	res, err := db.Exec(UPDATE_VIDEO, id, title)
+	if err != nil {
+		log.Errorf("err=%v", err)
+		return err
+	}
+
+	_, err = res.RowsAffected()
+	if err != nil {
+		log.Errorf("err=%v", err)
+		return err
+	} else {
+		log.Debugf("update video: id=%v, title=%v", id, title)
+	}
+
+	return nil
+}
+
 
 // Додати метрики
 func AddMetric(metrics []*model.Metrics) error {
