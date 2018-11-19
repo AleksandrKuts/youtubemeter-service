@@ -23,6 +23,7 @@ var (
 	PeriodVideoCache = flag.Duration("periodVideoCache", time.Minute * 5, "")
 
 	MaxSizeCacheVideo = flag.Int("maxSizeCacheVideo", 1000, "")
+	MaxSizeCacheVideoDesciption = flag.Int("maxSizeCacheVideoDesciption", 1000, "")
 	MaxSizeCachePlaylists = flag.Int("maxSizeCachePlaylists", 1000, "")
 
 	debugLevel = flag.String("debugLevel", "info", "")

@@ -115,8 +115,8 @@ func (l *ListPlayListInCache) reset() {
 	l.timeUpdate = MIN_TIME
 }
 
-// Структура для кешу плейлиста (списка відео)
-type PlayListInCache struct {
+// Структура для кешу списку відео без плейлиста
+type YoutubeVideoShortInCache struct {
 	// Час останнього запиту списку відео
 	timeUpdate time.Time  
 	
@@ -155,3 +155,20 @@ func (v *VideoInCache) updateCacheMetrics(metricsResponce []byte) {
 	v.updateMetrics = time.Now()
 	v.metricsResponce = metricsResponce
 }
+
+// Структура для кешу списку відео без плейлиста
+type GlobalCounts struct {
+	// Час останнього запиту списку відео
+	TimeUpdate time.Time `json:"timeupdate"`
+	
+	// Кількість плейлистів 
+	CountPlaylists int `json:"countpl"`
+	
+	// Кількість відео 
+	CountVideos int `json:"countvideo"`
+	
+	MaxVideoCount  int `json:"maxcountvideo"`
+	
+	PeriodVideoCache time.Duration `json:"periodvideocache"`	
+}
+

@@ -25,8 +25,14 @@ const GET_METRICS_BY_IDVIDEO = "Select * FROM return_metrics($1)"
 const GET_METRICS_BY_IDVIDEO_BETWEEN_DATE = "Select * FROM return_metrics($1, $2, $3)"
 
 const GET_VIDEO_BY_ID = "SELECT * FROM return_video($1)"
+
+const GET_VIDEOS= "SELECT v.id, TRIM(v.title), v.publishedat FROM video v LEFT JOIN playlist p ON p.id = v.idpl" +
+	" WHERE p.enable = true ORDER BY publishedat DESC LIMIT $1 OFFSET $2"
+	
 const GET_VIDEOS_BY_ID_PLAYLIST = "SELECT id, TRIM(title), publishedat FROM video WHERE idpl = $1 " +
 	" ORDER BY publishedat DESC LIMIT $2 OFFSET $3"
+	
+const GET_GLOBAL_COUNTS = "select count(*) as count, SUM(countvideo) as countvideo FROM playlist WHERE enable = TRUE"	
 
 // creat connections string
 // example: host=127.0.0.100 port=5432 dbname=base1 user=user1 password=lalala sslmode=disable"
@@ -265,11 +271,16 @@ func getVideoByIdFromDB(id string) ( *YoutubeVideo, error) {
 
 // Отримати список відео по id плейлиста
 func getVideosByPlayListIdFromDB(id string, offset int) ([]byte, error) {
-	if id == "" {
-		return nil, errors.New("video id is null")
-	}
+	log.Debugf("id: %v, offset: %v", id, offset)
 
-	rows, err := db.Query(GET_VIDEOS_BY_ID_PLAYLIST, id, *config.MaxViewVideosInPlayLists, offset)
+	var rows *sql.Rows
+	var err error
+
+	if id == "" {
+		rows, err = db.Query(GET_VIDEOS, *config.MaxViewVideosInPlayLists, offset)
+	} else {
+		rows, err = db.Query(GET_VIDEOS_BY_ID_PLAYLIST, id, *config.MaxViewVideosInPlayLists, offset)
+	}
 
 	if err != nil {
 		log.Errorf("Error get videos by plailist id: %v", err)
@@ -306,6 +317,27 @@ func getVideosByPlayListIdFromDB(id string, offset int) ([]byte, error) {
 
 	return stringVideos, nil
 }
+
+// Отримати опис відео по його id
+func getGlobalCountsFromDB() ( *GlobalCounts, error) {
+	var countPlaylists int
+	var countVideos int
+
+	err := db.QueryRow(GET_GLOBAL_COUNTS).Scan(&countPlaylists, &countVideos)
+	if err != nil {
+		log.Errorf("Error get global counts: %v", err)
+		return nil, err
+	}
+	
+	globalCounts := &GlobalCounts{CountPlaylists: countPlaylists, CountVideos: countVideos, TimeUpdate: time.Now(), 
+		MaxVideoCount: *config.MaxViewVideosInPlayLists, PeriodVideoCache: *config.PeriodVideoCache / 1000000}
+	
+	log.Debugf("countPlaylists: %v, countVideos: %v", countPlaylists, countVideos)
+
+	return globalCounts, nil
+}
+
+
 
 // Перевірка дати, заданої рядком мілісекунд, та її форматування
 // якщо дата не задана (пустий рядок), повертаємо пустий рядок

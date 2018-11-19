@@ -84,6 +84,8 @@ func newRouter() *mux.Router {
 	}
 
 	routeVideo := r.PathPrefix("/view").Subrouter()
+	routeVideo.Path("/counts").Methods("GET").HandlerFunc(getGlobalCountsHandler)
+	routeVideo.Path("/videos").Methods("GET").HandlerFunc(getVidesHandler)
 	routeVideo.Path("/videos/{id}").Methods("GET").HandlerFunc(getVideoByIdPlayListHandler)
 	routeVideo.Path("/video/{id}").Methods("GET").HandlerFunc(getVideoByIdHandler)
 	routeVideo.Path("/metrics/{id}").Methods("GET").HandlerFunc(getMetricsByVideoIdHandler)
@@ -351,6 +353,35 @@ func getVideoByIdHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(videoJson)
 }
 
+
+// Оброблювач запиту на отримання списку відео id плейлиста
+func getVidesHandler(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	req := q.Get("req")
+	skip := q.Get("skip")
+
+	offset, err := strconv.Atoi(skip)
+	if err != nil {
+		offset = 0
+	}
+
+	log.Debugf("req=%v(%v), offset=%v", req, formatStringDate(req), offset)
+
+	videosJson, err := getVideos(offset)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
+	//	w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(videosJson)))
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(videosJson)
+}
+
+
 // Оброблювач запиту на отримання списку відео id плейлиста
 func getVideoByIdPlayListHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -379,4 +410,25 @@ func getVideoByIdPlayListHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(videosJson)
+}
+
+
+// Оброблювач запиту на отримання списку відео id плейлиста
+func getGlobalCountsHandler(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	req := q.Get("req")
+	log.Debugf("req=%v(%v)", req)
+
+	globalCountsJson, err := getGlobalCounts()
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
+	//	w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(videosJson)))
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(globalCountsJson)
 }
