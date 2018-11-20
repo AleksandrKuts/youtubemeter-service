@@ -180,7 +180,7 @@ func UpdateVideo(id, title string) error {
 		return errors.New("Error update video, id is null")
 	}
 
-	res, err := db.Exec(UPDATE_VIDEO, id, title)
+	res, err := db.Exec(UPDATE_VIDEO, title, id)
 	if err != nil {
 		log.Errorf("err=%v", err)
 		return err

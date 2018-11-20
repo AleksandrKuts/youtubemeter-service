@@ -56,7 +56,7 @@ func init() {
 }
 
 func StartService(versionMajor, versionMin string) {
-	log.Warnf("server start, version: %s.%s\n", versionMajor, versionMin)
+	log.Warnf("\nserver start, version: %s.%s", versionMajor, versionMin)
 
 	initPlayLists()
 
@@ -311,7 +311,7 @@ func checkVideosByPlaylistId(playList *model.YoutubePlayList) {
 					log.Error(err)
 					continue
 				}
-				log.Debugf("pl: %v, video: %v, update title %v ---> %v?", playList.Id, videoId, video.Title, item.Snippet.Title)
+				log.Infof("pl: %v, video: %v, update title[ %v] --> [%v]", playList.Id, videoId, video.Title, item.Snippet.Title)
 				video.Title = item.Snippet.Title
 			}
 		}

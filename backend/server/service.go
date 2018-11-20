@@ -23,7 +23,7 @@ var cachePlayLists *lru.TwoQueueCache
 // Кеш для списку плейлистів
 var listCachePlayLists *ListPlayListInCache
 
-// Глобальные счетчики
+// Глобальні метрики
 var globalCounts *GlobalCounts
 
 func init() {
@@ -75,10 +75,11 @@ func deletePlayList(playlistId string) error {
 
 // Отримати опис відео по його id
 func getVideoById(id string) ([]byte, error) {
+	log.Debugf("getVideoById(id: %v)", id)
+
 	if id == "" {
 		return nil, errors.New("video id is null")
 	}
-	log.Debugf("id: %v", id)
 
 	var ok bool = false
 	var videoi interface{}
@@ -140,6 +141,8 @@ func getVideoById(id string) ([]byte, error) {
 // Отримати метрики по відео id за заданий період
 // Такий запит не використовуэ кеш
 func getMetricsByIdFromTo(id string, from, to string) ([]byte, error) {
+	log.Debugf("getMetricsByIdFromTo(id: %v, from %v, to %v) ", id, from, to)
+
 	// В кеші актуальної інформации не знайдено, запрошуемо в БД
 	response, err := getMetricsByIdFromDB(id, from, to)
 	if err != nil {
@@ -160,10 +163,10 @@ func getMetricsByIdFromTo(id string, from, to string) ([]byte, error) {
 // Отримати метрики по відео id або за весь період, або за заданий період
 // Якщо період не заданий то використовується кеш, якщо період заданий кеш не використовується
 func getMetricsById(id string, from, to string) ([]byte, error) {
+	log.Debugf("getMetricsById(id: %v, from: %v, to: %v)", id, from, to)
 	if id == "" {
 		return nil, errors.New("video id is null")
 	}
-	log.Debugf("id: %v, from: %v, to: %v", id, from, to)
 
 	// Период заданий, такий запит обробляємо окремо
 	if from != "" || to != "" {
@@ -230,6 +233,7 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 
 // Отримати список відео
 func getVideos(offset int) ([]byte, error) {
+	log.Debugf("getVideos(offset: %v)", offset)
 	cacheId := offset
 
 	// з кешем робимо тільки якщо він включений
@@ -273,6 +277,8 @@ func getVideos(offset int) ([]byte, error) {
 
 // Отримати список відео по id плейлиста
 func getVideosByPlayListId(id string, offset int) ([]byte, error) {
+	log.Debugf("getVideosByPlayListId(id: %v, offset: %v)", id, offset)
+
 	if id == "" {
 		return nil, errors.New("video id is null")
 	}
@@ -319,6 +325,7 @@ func getVideosByPlayListId(id string, offset int) ([]byte, error) {
 
 // Отримати список плейлистів
 func getPlaylists(onlyEnable bool) ([]byte, error) {
+	log.Debugf("getPlaylists(onlyEnable: %v)", onlyEnable)
 	// з кешем робимо тільки якщо він включений та це не запит адміністратора на всі плейлисти
 	if *config.EnableCache && onlyEnable {
 		log.Debugf("playlists, cache, timeUpdate: %v", listCachePlayLists.timeUpdate)

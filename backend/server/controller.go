@@ -22,7 +22,7 @@ func init() {
 }
 
 func StartService(versionMajor, versionMin string) {
-	log.Warnf("server start, version: %s.%s\n", versionMajor, versionMin)
+	log.Warnf("\nserver start, version: %s.%s", versionMajor, versionMin)
 	log.Debugf("port=%s", *config.Addr)
 
 	r := newRouter()
@@ -325,7 +325,7 @@ func getMetricsByVideoIdHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(metricsVideoJson)
 }
 
-// Оброблювач запиту на даних по відео id
+// Оброблювач запиту даних по відео id
 func getVideoByIdHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
@@ -354,7 +354,7 @@ func getVideoByIdHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 
-// Оброблювач запиту на отримання списку відео id плейлиста
+// Оброблювач запиту на отримання списку всіх відео 
 func getVidesHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	req := q.Get("req")
@@ -413,7 +413,7 @@ func getVideoByIdPlayListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 
-// Оброблювач запиту на отримання списку відео id плейлиста
+// Оброблювач запиту на отримання глобальних метрик (кількість відео, кількість плейлистів)
 func getGlobalCountsHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	req := q.Get("req")
