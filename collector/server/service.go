@@ -56,7 +56,7 @@ func init() {
 }
 
 func StartService(versionMajor, versionMin string) {
-	log.Warnf("\nserver start, version: %s.%s", versionMajor, versionMin)
+	log.Warnf("server start, version: %s.%s", versionMajor, versionMin)
 
 	initPlayLists()
 
@@ -432,14 +432,6 @@ func getRequestVideosFromPlayList(playList *model.YoutubePlayList) []map[string]
 	countall := 0
 	for id, video := range playList.Videos {
 		if !video.Deleted { // додаються тільки робочі плейлисти
-			// Таке відео повинно бути видалене
-			timeElapsed := time.Since(video.PublishedAt)
-			if timeElapsed > *config.PeriodСollection {
-				log.Errorf("pl: %v, video: %v, deleted but works, timeElapsed: %v, published: %v", playList.Id, id,
-					timeElapsed, video.PublishedAt)
-				continue
-			}
-
 			// обробляємо тільки дозволену кількість відео. Запрос ділимо на частини
 			// Робимо нову частину запросу: ще 50 відео
 			if count >= *config.MaxRequestCountVideoID {

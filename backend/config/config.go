@@ -96,9 +96,9 @@ func init() {
 	Logger = logger.Sugar()
 
 	Logger.Warnf("debug level=%v", atomicLevel)
-	Logger.Debugf("Log=%v", Log)
-	Logger.Debugf("LogError=%v", LogError)
-	Logger.Debugf("LogTimeFormat=%v", LogTimeFormat)
+	Logger.Debugf("Log=%v", *Log)
+	Logger.Debugf("LogError=%v", *LogError)
+	Logger.Debugf("LogTimeFormat=%v", *LogTimeFormat)
 	
 	Logger.Debugf("addr=%v", *Addr)
 	Logger.Debugf("timeout=%v", *Timeout)

@@ -181,7 +181,7 @@ func getPlaylistsFromDB(onlyEnable bool) ([]PlayList, error) {
 		return nil, err
 	}
 
-	log.Error("Success get playlists from DB")
+	log.Debugf("Success get playlists from DB")
 
 	return response, nil
 }

@@ -22,7 +22,7 @@ func init() {
 }
 
 func StartService(versionMajor, versionMin string) {
-	log.Warnf("\nserver start, version: %s.%s", versionMajor, versionMin)
+	log.Warnf("server start, version: %s.%s", versionMajor, versionMin)
 	log.Debugf("port=%s", *config.Addr)
 
 	r := newRouter()
