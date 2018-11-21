@@ -26,10 +26,12 @@ const GET_METRICS_BY_IDVIDEO_BETWEEN_DATE = "Select * FROM return_metrics($1, $2
 
 const GET_VIDEO_BY_ID = "SELECT * FROM return_video($1)"
 
-const GET_VIDEOS= "SELECT v.id, TRIM(v.title), v.publishedat FROM video v LEFT JOIN playlist p ON p.id = v.idpl" +
+const GET_VIDEOS= "SELECT v.id, TRIM(v.title), v.publishedat, TRIM(p.title) as ptitle FROM video v" +
+	" LEFT JOIN playlist p ON p.id = v.idpl" +
 	" WHERE p.enable = true ORDER BY publishedat DESC LIMIT $1 OFFSET $2"
 	
-const GET_VIDEOS_BY_ID_PLAYLIST = "SELECT id, TRIM(title), publishedat FROM video WHERE idpl = $1 " +
+const GET_VIDEOS_BY_ID_PLAYLIST = "SELECT id, TRIM(title), publishedat, '' ptitle FROM video v" + 
+	" WHERE idpl = $1 " +
 	" ORDER BY publishedat DESC LIMIT $2 OFFSET $3"
 	
 const GET_GLOBAL_COUNTS = "select count(*) as count, SUM(countvideo) as countvideo FROM playlist WHERE enable = TRUE"	
@@ -294,10 +296,11 @@ func getVideosByPlayListIdFromDB(id string, offset int) ([]byte, error) {
 		var id string
 		var title string
 		var publishedat time.Time
+		var ptitle string
 
-		rows.Scan(&id, &title, &publishedat)
+		rows.Scan(&id, &title, &publishedat, &ptitle)
 
-		response = append(response, YoutubeVideoShort{id, title, publishedat})
+		response = append(response, YoutubeVideoShort{id, title, publishedat, ptitle})
 	}
 	err = rows.Err()
 	if err != nil {

@@ -75,6 +75,9 @@ type YoutubeVideoShort struct {
 	// playlist. The value is specified in ISO 8601 (YYYY-MM-DDThh:mm:ss.sZ)
 	// format.
 	PublishedAt time.Time `json:"publishedat"`
+	
+	// Title: The playlist's title.
+	Ptitle string `json:"ptitle"`
 }
 
 // Metric: A video resource represents a metric YouTube video.
