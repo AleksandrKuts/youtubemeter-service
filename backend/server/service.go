@@ -35,7 +35,7 @@ func init() {
 			log.Fatalf("err: %v", err)
 		}
 
-		cacheVideoDescription, err = lru.New2Q(*config.MaxSizeCacheVideo)
+		cacheVideoDescription, err = lru.New2Q(*config.MaxSizeCacheVideoDescription)
 		if err != nil {
 			log.Fatalf("err: %v", err)
 		}

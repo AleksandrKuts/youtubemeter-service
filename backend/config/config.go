@@ -23,7 +23,7 @@ var (
 	PeriodVideoCache = flag.Duration("periodVideoCache", time.Minute * 5, "")
 
 	MaxSizeCacheVideo = flag.Int("maxSizeCacheVideo", 1000, "")
-	MaxSizeCacheVideoDesciption = flag.Int("maxSizeCacheVideoDesciption", 1000, "")
+	MaxSizeCacheVideoDescription = flag.Int("maxSizeCacheVideoDescription", 1000, "")
 	MaxSizeCachePlaylists = flag.Int("maxSizeCachePlaylists", 1000, "")
 
 	debugLevel = flag.String("debugLevel", "info", "")
@@ -113,6 +113,7 @@ func init() {
 
 	Logger.Debugf("EnableCache=%v", *EnableCache)
 	Logger.Debugf("MaxSizeCacheVideo=%v", *MaxSizeCacheVideo)
+	Logger.Debugf("MaxSizeCacheVideoDescription=%v", *MaxSizeCacheVideoDescription)	
 	Logger.Debugf("MaxSizeCachePlaylists=%v", *MaxSizeCachePlaylists)
 
 	Logger.Debugf("dbhost=%s", *DBHost)
