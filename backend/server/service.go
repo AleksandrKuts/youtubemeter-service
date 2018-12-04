@@ -368,10 +368,10 @@ func getPlaylists(onlyEnable bool) ([]byte, error) {
 	return stringJsonPlaylists, nil
 }
 
-func getGlobalCounts() ([]byte, error) {
+func getGlobalCounts(version string) ([]byte, error) {
 	log.Debug("get globalCounts")
 	if globalCounts == nil || time.Since(globalCounts.TimeUpdate) > *config.PeriodVideoCache {
-		g, err := getGlobalCountsFromDB()
+		g, err := getGlobalCountsFromDB(version)
 		if err == nil {
 			globalCounts = g;
 		}		

@@ -322,7 +322,7 @@ func getVideosByPlayListIdFromDB(id string, offset int) ([]byte, error) {
 }
 
 // Отримати опис відео по його id
-func getGlobalCountsFromDB() ( *GlobalCounts, error) {
+func getGlobalCountsFromDB(version string) ( *GlobalCounts, error) {
 	var countPlaylists int
 	var countVideos int
 
@@ -333,7 +333,8 @@ func getGlobalCountsFromDB() ( *GlobalCounts, error) {
 	}
 	
 	globalCounts := &GlobalCounts{CountPlaylists: countPlaylists, CountVideos: countVideos, TimeUpdate: time.Now(), 
-		MaxVideoCount: *config.MaxViewVideosInPlayLists, PeriodVideoCache: *config.PeriodVideoCache / 1000000}
+		MaxVideoCount: *config.MaxViewVideosInPlayLists, PeriodVideoCache: *config.PeriodVideoCache / 1000000,
+		Version: version, ListenAdmin: *config.ListenAdmin}
 	
 	log.Debugf("countPlaylists: %v, countVideos: %v", countPlaylists, countVideos)
 

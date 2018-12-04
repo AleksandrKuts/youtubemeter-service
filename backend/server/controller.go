@@ -17,12 +17,15 @@ import (
 const CONTENT_TYPE_KEY = "Content-Type"
 const CONTENT_TYPE_VALUE = "application/json"
 
+var version string
+
 func init() {
 	log = config.Logger
 }
 
 func StartService(versionMajor, versionMin string) {
 	log.Warnf("server start, version: %s.%s", versionMajor, versionMin)
+	version = versionMajor + "." + versionMin
 	log.Debugf("port=%s", *config.Addr)
 
 	r := newRouter()
@@ -419,7 +422,7 @@ func getGlobalCountsHandler(w http.ResponseWriter, r *http.Request) {
 	req := q.Get("req")
 	log.Debugf("req=%v(%v)", req)
 
-	globalCountsJson, err := getGlobalCounts()
+	globalCountsJson, err := getGlobalCounts(version)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

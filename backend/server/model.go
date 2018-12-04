@@ -173,5 +173,9 @@ type GlobalCounts struct {
 	MaxVideoCount  int `json:"maxcountvideo"`
 	
 	PeriodVideoCache time.Duration `json:"periodvideocache"`	
+	
+	Version string `json:"version"`
+	
+	ListenAdmin  bool `json:"listenadmin"`
 }
 
