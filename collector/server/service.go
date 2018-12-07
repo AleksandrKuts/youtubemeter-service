@@ -69,6 +69,8 @@ func StartService(versionMajor, versionMin string) {
 
 	timerPlayList := time.Tick(*config.PeriodPlayList)
 	timerVideo := time.Tick(*config.PeriodVideo)
+
+	time.Sleep(*config.ShiftPeriodMetric)
 	timerMeter := time.Tick(*config.PeriodMeter)
 
 	quit := make(chan os.Signal, 1)
@@ -388,14 +390,15 @@ func addVideo(playList *model.YoutubePlayList, videoId string, item *youtube.Pla
 }
 
 func getMeters() {
-	log.Debug("get meters")
+	log.Debug("check meters start")
 
 	requestPlayList := getRequestPlayList() // отримуємо список плейлистів для запросів
-	log.Debugf("get meters, count request playlists: %v", len(requestPlayList))
+	log.Debugf("check meters, count request playlists: %v", len(requestPlayList))
 
 	for _, playList := range requestPlayList {
 		go getMetersVideos(playList)
 	}
+	log.Debug("check meters end")
 }
 
 func getMetersVideos(playList *model.YoutubePlayList) {
