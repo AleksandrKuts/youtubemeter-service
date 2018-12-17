@@ -36,6 +36,8 @@ const GET_VIDEOS_BY_ID_PLAYLIST = "SELECT id, TRIM(title), publishedat, '' ptitl
 	
 const GET_GLOBAL_COUNTS = "select count(*) as count, SUM(countvideo) as countvideo FROM playlist WHERE enable = TRUE"	
 
+const NO_DATA = "No data"
+
 // creat connections string
 // example: host=127.0.0.100 port=5432 dbname=base1 user=user1 password=lalala sslmode=disable"
 var connStrForDatabse string
@@ -156,6 +158,11 @@ func getPlaylistsFromDB(onlyEnable bool) ([]PlayList, error) {
 		log.Errorf("Error get playlists: %v", err)
 		return nil, err
 	}
+
+	if rows == nil {
+		return nil, errors.New( NO_DATA )
+	}
+
 	defer rows.Close()
 
 	response := []PlayList{}
@@ -216,8 +223,13 @@ func getMetricsByIdFromDB(id string, from, to string) ([]*Metrics, error) {
 		log.Errorf("Error get metrics: %v", err)
 		return nil, err
 	}
-	defer rows.Close()
 
+	if rows == nil {
+		return nil, errors.New( NO_DATA )
+	}
+
+	defer rows.Close()
+	
 	response := []*Metrics{}
 
 	for rows.Next() {
@@ -288,6 +300,11 @@ func getVideosByPlayListIdFromDB(id string, offset int) ([]byte, error) {
 		log.Errorf("Error get videos by plailist id: %v", err)
 		return nil, err
 	}
+
+	if rows == nil {
+		return nil, errors.New( NO_DATA )
+	}
+
 	defer rows.Close()
 
 	response := []YoutubeVideoShort{}

@@ -96,8 +96,9 @@ func getVideoById(id string) ([]byte, error) {
 
 			// Дані з кешу беремо тільки якщо з останнього запиту пройшло часу менш
 			// ніж період збору метрик, або якщо збір метрик вже припинився.
-			if time.Since(video.publishedAt) > *config.PeriodCollectionCache ||
-				time.Since(video.updateVideo) < *config.PeriodMeterCache {
+			if video.videoResponce != nil && 
+				( time.Since(video.publishedAt) > *config.PeriodCollectionCache ||
+				time.Since(video.updateVideo) < *config.PeriodMeterCache) {
 
 				log.Infof("id: %v, get video from cache", id)
 				log.Debugf("id: %v, cache, video %v", id, string(video.videoResponce))
@@ -190,8 +191,9 @@ func getMetricsById(id string, from, to string) ([]byte, error) {
 
 			// Дані з кешу беремо тільки якщо з останнього запиту пройшло часу менш
 			// ніж період збору метрик, або якщо збір метрик вже припинився.
-			if time.Since(video.updateMetrics) < *config.PeriodMeterCache ||
-				time.Since(video.publishedAt) > *config.PeriodCollectionCache {
+			if video.metricsResponce != nil && 
+				( time.Since(video.updateMetrics) < *config.PeriodMeterCache ||
+				time.Since(video.publishedAt) > *config.PeriodCollectionCache) {
 
 				log.Infof("id: %v, get metrics from cache", id)
 				log.Debugf("id: %v, cache, metrics: %v", id, string(video.metricsResponce))
