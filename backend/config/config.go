@@ -16,6 +16,9 @@ var (
 	Origin = flag.String("Origin", "*", "")
 	MaxViewVideosInPlayLists = flag.Int("MaxViewVideosInPlayLists", 30, "")
 
+	SSLcertFile = flag.String("certFile", "certFile", "")
+	SSLkeyFile = flag.String("keyFile", "keyFile", "")
+
 	EnableCache = flag.Bool("enableCache", true, "Enable cache?")
 	PeriodPlayListCache = flag.Duration("periodPlayListCache", time.Minute * 30, "")
 	PeriodMeterCache = flag.Duration("periodMetricCache", time.Second * 60, "")	
@@ -105,6 +108,8 @@ func init() {
 	Logger.Debugf("ListenAdmin=%v", *ListenAdmin)
 	Logger.Debugf("Origin=%v", *Origin)
 	Logger.Debugf("MaxViewVideosInPlayLists=%v", *MaxViewVideosInPlayLists)
+	Logger.Debugf("SSLcertFile=%v", *SSLcertFile)
+	Logger.Debugf("SSLkeyFile=%v", *SSLkeyFile)
 		
 	Logger.Debugf("PeriodPlayListCache=%v", *PeriodPlayListCache)
 	Logger.Debugf("PeriodVideoCache=%v", *PeriodVideoCache)

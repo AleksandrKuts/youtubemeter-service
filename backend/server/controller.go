@@ -42,7 +42,7 @@ func StartService(versionMajor, versionMin string) {
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
 		log.Info("server started")
-		if err := srv.ListenAndServe(); err != nil {
+		if err := srv.ListenAndServeTLS(*config.SSLcertFile, *config.SSLkeyFile); err != nil {
 			log.Fatal(err)
 		}
 	}()
