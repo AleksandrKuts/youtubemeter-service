@@ -16,6 +16,7 @@ var (
 	Origin = flag.String("Origin", "*", "")
 	MaxViewVideosInPlayLists = flag.Int("MaxViewVideosInPlayLists", 30, "")
 
+	EnableTLS = flag.Bool("enableTLS", false, "")
 	SSLcertFile = flag.String("certFile", "certFile", "")
 	SSLkeyFile = flag.String("keyFile", "keyFile", "")
 
@@ -108,8 +109,10 @@ func init() {
 	Logger.Debugf("ListenAdmin=%v", *ListenAdmin)
 	Logger.Debugf("Origin=%v", *Origin)
 	Logger.Debugf("MaxViewVideosInPlayLists=%v", *MaxViewVideosInPlayLists)
-	Logger.Debugf("SSLcertFile=%v", *SSLcertFile)
+
+	Logger.Debugf("EnableTLS=%v", *EnableTLS)
 	Logger.Debugf("SSLkeyFile=%v", *SSLkeyFile)
+	Logger.Debugf("SSLcertFile=%v", *SSLcertFile)
 		
 	Logger.Debugf("PeriodPlayListCache=%v", *PeriodPlayListCache)
 	Logger.Debugf("PeriodVideoCache=%v", *PeriodVideoCache)

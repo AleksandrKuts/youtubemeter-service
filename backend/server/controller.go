@@ -41,8 +41,17 @@ func StartService(versionMajor, versionMin string) {
 
 	// Run our server in a goroutine so that it doesn't block.
 	go func() {
-		log.Info("server started")
-		if err := srv.ListenAndServeTLS(*config.SSLcertFile, *config.SSLkeyFile); err != nil {
+		var err error
+				
+		if *config.EnableTLS {
+			log.Info("server started with TLS")
+			err = srv.ListenAndServeTLS(*config.SSLcertFile, *config.SSLkeyFile);
+		} else {
+			log.Info("server started")
+			err = srv.ListenAndServe();
+		}
+		
+		if err != nil {
 			log.Fatal(err)
 		}
 	}()
@@ -149,7 +158,7 @@ func handlerMiddleware(next http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 			}
 		} else {
-			log.Errorf("origin is not: [%v] ", *config.Origin)
+			log.Errorf("invalid origin: [%v] != [%v] ",origin, *config.Origin)
 			http.Error(w, "Access denied", http.StatusForbidden)
 			return
 		}
@@ -420,7 +429,7 @@ func getVideoByIdPlayListHandler(w http.ResponseWriter, r *http.Request) {
 func getGlobalCountsHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	req := q.Get("req")
-	log.Debugf("req=%v(%v)", req)
+	log.Debugf("req=%v", req)
 
 	globalCountsJson, err := getGlobalCounts(version)
 
