@@ -219,7 +219,6 @@ CREATE TABLE public.video (
     idch character(24) NOT NULL,
     title character(100) DEFAULT ''::bpchar,
     description character varying(5000),
-    chtitle character(100) DEFAULT ''::bpchar,
     publishedat timestamp with time zone
 );
 

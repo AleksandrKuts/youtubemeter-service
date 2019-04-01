@@ -1,4 +1,4 @@
-package model
+package collector
 
 import (
 	"sync"
@@ -47,7 +47,8 @@ func (video *YoutubeVideo) SetMetrics(CommentCount, LikeCount, DislikeCount, Vie
 	video.TimeCount = time.Now()
 }
 
-type YoutubePlayList struct {
+// Channel: A channel resource represents a YouTube channel.
+type YoutubeChannel struct {
 	Id string
 	
 	// Video: A list video resource represents a YouTube video.
@@ -56,50 +57,50 @@ type YoutubePlayList struct {
 	// is deleted or deactivated
 	Deleted bool
 
-	// Time elapsed since deleted PlayList
+	// Time elapsed since deleted Channel
 	TimeDeleted time.Time
 	
 	Mux sync.Mutex
 }
 
-func (playlist *YoutubePlayList) Append(id string, video *YoutubeVideo) {
-	playlist.Videos[id] = video	
+func (channel *YoutubeChannel) Append(id string, video *YoutubeVideo) {
+	channel.Videos[id] = video	
 }
 
-// mark playlist as deleted from meter ( not in database )
-func (playlist *YoutubePlayList) SetDeletedVideo(id string) {
-	playlist.Videos[id].Deleted = true  	
-	playlist.Videos[id].TimeDeleted = time.Now()
+// mark video as deleted from meter ( not in database )
+func (channel *YoutubeChannel) SetDeletedVideo(id string) {
+	channel.Videos[id].Deleted = true  	
+	channel.Videos[id].TimeDeleted = time.Now()
 }
 
-func (playlist *YoutubePlayList) Delete(id string) {
-	delete(playlist.Videos, id)	
+func (channel *YoutubeChannel) Delete(id string) {
+	delete(channel.Videos, id)	
 }
 
-type YoutubePlayLists struct {
-	// Словник посилань на ПлейЛисти
-	Playlists map[string]*YoutubePlayList
+type YoutubeChannels struct {
+	// Словник посилань на канали
+	Channels map[string]*YoutubeChannel
 	Mux sync.Mutex
 } 
 
-// mark playlist as deleted from meter ( not in database )
-func (playlists *YoutubePlayLists) SetDeletedPlayList(id string) {
-	playlists.Playlists[id].Deleted = true  	
-	playlists.Playlists[id].TimeDeleted = time.Now()  	
+// mark Channel as deleted from meter ( not in database )
+func (channels *YoutubeChannels) SetDeletedChannel(id string) {
+	channels.Channels[id].Deleted = true  	
+	channels.Channels[id].TimeDeleted = time.Now()  	
 }
 
-// mark playlist as deleted from meter ( not in database )
-func (playlists *YoutubePlayLists) CanselDeletedPlayList(id string) {
-	playlists.Playlists[id].Deleted = false  	
+// mark Channel as deleted from meter ( not in database )
+func (channels *YoutubeChannels) CanselDeletedChannel(id string) {
+	channels.Channels[id].Deleted = false  	
 }
 
-func (playlists *YoutubePlayLists) Delete(id string) {
-	delete(playlists.Playlists, id)	
+func (channels *YoutubeChannels) Delete(id string) {
+	delete(channels.Channels, id)	
 }
 
-func (playlists *YoutubePlayLists) Append(id string) {	
-	v := YoutubePlayList{Videos: make(map[string]*YoutubeVideo), Deleted: false, Id: id }
-	playlists.Playlists[id] = &v  	
+func (channels *YoutubeChannels) Append(id string) {	
+	v := YoutubeChannel{Videos: make(map[string]*YoutubeVideo), Deleted: false, Id: id }
+	channels.Channels[id] = &v  	
 }
 
 // Video: A video resource represents a YouTube video.
@@ -124,6 +125,3 @@ type Metrics struct {
 	// Last poll time to get metrics
 	Time time.Time
 }
-
-
-//var playlists YoutubePlayLists = YoutubePlayLists{playlists: make(map[string]*YoutubePlayList)}

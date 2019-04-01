@@ -1,4 +1,4 @@
-package config
+package collector
 
 import (
 	"flag"
@@ -21,7 +21,7 @@ var (
 	
 	Timeout = flag.Duration("timeout", time.Second * 15, "")
 
-	PeriodPlayList = flag.Duration("periodPlayList", time.Second * 600, "")
+	PeriodChannel = flag.Duration("periodChannel", time.Second * 600, "")
 	PeriodVideo = flag.Duration("periodVideo", time.Second * 60, "")
 	PeriodMeter = flag.Duration("periodMetric", time.Second * 60, "")
 	ShiftPeriodMetric = flag.Duration("shiftPeriodMetric", time.Second * 30, "")
@@ -38,7 +38,7 @@ var (
 	DBPassword = flag.String("dbpasswd", "userpasswd", "")
 	DBSSLMode = flag.String("dbsslmode", "disable", "")
 
-	Logger *zap.SugaredLogger	
+	Logger *zap.SugaredLogger
 )
 
 func myTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
@@ -108,7 +108,7 @@ func init() {
 	Logger.Debugf("fileSecret=%v", *FileSecret)
 	Logger.Debugf("timeout=%v", *Timeout)
 	
-	Logger.Debugf("PeriodPlayList=%v", *PeriodPlayList)
+	Logger.Debugf("PeriodChannel=%v", *PeriodChannel)
 	Logger.Debugf("PeriodVideo=%v", *PeriodVideo)
 	Logger.Debugf("PeriodMeter=%v", *PeriodMeter)
 	Logger.Debugf("ShiftPeriodMetric=%v", *ShiftPeriodMetric)	

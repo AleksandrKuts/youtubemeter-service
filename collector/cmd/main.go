@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/AleksandrKuts/youtubemeter-service/collector/server"
+	"github.com/AleksandrKuts/youtubemeter-service/collector"
 )
 
-const versionMajor = "0.1"
+const versionMajor = "0.2"
 
 var (
 	version string
@@ -13,5 +13,5 @@ var (
 
 func main() {
 	fmt.Printf("version: %s.%s\n", versionMajor, version)
-	server.StartService(versionMajor, version)
+	collector.StartService(versionMajor, version)
 }
