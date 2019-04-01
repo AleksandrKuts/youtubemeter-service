@@ -1,0 +1,8 @@
+1. Створюємо користувача бази данних (БД)
+	sudo -u postgres createuser --pwprompt youtubemetric
+
+2. Створюємо та налаштовуємо БД
+	sudo -u postgres createdb -O youtubemetric -E Unicode -T template0 youtube_statistics2
+
+3. Створюємо необхідну структуру БД
+	cat scheme.sql | sudo -u postgres psql -U youtubemetric youtube_statistics2
