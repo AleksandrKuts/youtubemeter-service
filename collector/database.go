@@ -20,8 +20,8 @@ const GET_CHANNELS_WITH_VIDEO = "SELECT ch.id, v.id as vid, v.publishedat, TRIM(
 	"WHERE ch.enable = true " +
 	"ORDER BY ch.id"
 
-const INSERT_VIDEO = "INSERT INTO video ( id, idch, publishedat, title, description ) " +
-	"VALUES ( $1, $2, $3, $4, $5 ) " +
+const INSERT_VIDEO = "INSERT INTO video ( id, idch, publishedat, title, description, duration ) " +
+	"VALUES ( $1, $2, $3, $4, $5, $6 ) " +
 	"ON CONFLICT (id) DO UPDATE SET " +
 	"publishedat = EXCLUDED.publishedat, title = EXCLUDED.title, description = EXCLUDED.description"
 
@@ -141,15 +141,15 @@ func GetChannelsIDsFromDB() (map[string]bool, error) {
 }
 
 // Додати відео
-func AddVideoToDB(id, idch string, publishedat time.Time, title, description string) error {
+func AddVideoToDB(id, idch string, publishedat time.Time, title, description string, videoDuration time.Duration) error {
 	if id == "" {
 		return errors.New("Error add video, id is null")
 	}
 	if idch == "" {
-		return errors.New("Error add video, idpl is null")
+		return errors.New("Error add video, idch is null")
 	}
 
-	res, err := db.Exec(INSERT_VIDEO, id, idch, publishedat, title, description)
+	res, err := db.Exec(INSERT_VIDEO, id, idch, publishedat, title, description, videoDuration)
 	if err != nil {
 		Logger.Errorf("err=%v", err)
 		return err
@@ -160,7 +160,7 @@ func AddVideoToDB(id, idch string, publishedat time.Time, title, description str
 		Logger.Errorf("err=%v", err)
 		return err
 	} else {
-		Logger.Debugf("insert video: id=%v, idpl=%v, publishedat=%v, title=%v", id, idch,
+		Logger.Debugf("insert video: id: %v, idpl: %v, publishedat: %v, title: %v, videoDuration: %v", id, idch,
 			publishedat, title)
 	}
 

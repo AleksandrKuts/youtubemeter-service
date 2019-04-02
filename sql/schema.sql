@@ -1,5 +1,22 @@
+
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET row_security = off;
+
+
 CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+
 COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
 
 CREATE FUNCTION public.change_video() RETURNS trigger
     LANGUAGE plpgsql
@@ -14,6 +31,7 @@ RETURN OLD;
 END IF;
 END
 $$;
+
 
 
 CREATE FUNCTION public.return_metrics(_idv character) RETURNS TABLE(commentcount bigint, likecount bigint, dislikecount bigint, viewcount bigint, timemetric timestamp with time zone)
@@ -76,6 +94,7 @@ CREATE FUNCTION public.return_metrics(_idv character) RETURNS TABLE(commentcount
       	
   END;
 $$;
+
 
 
 CREATE FUNCTION public.return_metrics(_idv character, _from_ch character, _to_ch character) RETURNS TABLE(commentcount bigint, likecount bigint, dislikecount bigint, viewcount bigint, timemetric timestamp with time zone)
@@ -161,27 +180,51 @@ CREATE FUNCTION public.return_metrics(_idv character, _from_ch character, _to_ch
 $$;
 
 
-CREATE FUNCTION public.return_video(_idv character, OUT _idch character, OUT _title character, OUT _description character, OUT _chtitle character, OUT _publishedat timestamp with time zone, OUT _count_metrics integer, OUT _min_timemetric timestamp with time zone, OUT _max_timemetric timestamp with time zone) RETURNS record
+
+CREATE FUNCTION public.return_video(_idv character, OUT _title character, OUT _description character, OUT _idch character, OUT _chtitle character, OUT _publishedat timestamp with time zone, OUT _count_metrics integer, OUT _min_timemetric timestamp with time zone, OUT _max_timemetric timestamp with time zone) RETURNS record
     LANGUAGE plpgsql
     AS $$
 
   DECLARE
     _id varchar;
+    
   BEGIN
-	SELECT id, idch, TRIM(title), TRIM(description), TRIM(chtitle), publishedat FROM video 
-	WHERE id = _idv INTO _id, _idch, _title, _description, _chtitle, _publishedat;
+	RAISE NOTICE '1 (%, %)', _idv, _id;
+	SELECT id, title, TRIM(description), idch, publishedat
+	FROM video
+	WHERE id = _idv 
+	INTO _id, _title, _description, _idch, _publishedat;
+	RAISE NOTICE '2 (%, %)', _idv, _id;
 
 	/* Перевірка чи є дані по відео*/
 	IF _id IS NULL THEN
-		RAISE EXCEPTION 'There are no video id: %', _idv USING HINT = 'Please check your video ID';
+		RAISE EXCEPTION 'There is no video id: %', _idv USING HINT = 'Please check your video ID';
 	ELSE
-		SELECT COUNT(*), MAX(timemetric), MIN(timemetric) FROM metric 
-		WHERE idvideo = _idv INTO _count_metrics, _max_timemetric, _min_timemetric;		
+		SELECT COUNT(*), MAX(timemetric), MIN(timemetric) 
+		FROM metric 
+		WHERE idvideo = _idv 
+		INTO _count_metrics, _max_timemetric, _min_timemetric;
+
+		SELECT title FROM channel WHERE id = _idch INTO _chtitle;		
+
 	END IF;		
 
 	
   END;
 $$;
+
+
+SET default_with_oids = false;
+
+
+CREATE TABLE public.channel (
+    id character(24) NOT NULL,
+    enable boolean,
+    title character(80),
+    timeadd timestamp with time zone DEFAULT now(),
+    countvideo integer DEFAULT 0
+);
+
 
 
 CREATE TABLE public.metric (
@@ -195,6 +238,7 @@ CREATE TABLE public.metric (
 );
 
 
+
 CREATE SEQUENCE public.metrics_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -203,15 +247,9 @@ CREATE SEQUENCE public.metrics_id_seq
     CACHE 1;
 
 
+
 ALTER SEQUENCE public.metrics_id_seq OWNED BY public.metric.id;
 
-CREATE TABLE public.channel (
-    id character(24) NOT NULL,
-    enable boolean,
-    title character(80),
-    timeadd timestamp with time zone DEFAULT now(),
-    countvideo integer DEFAULT 0
-);
 
 
 CREATE TABLE public.video (
@@ -219,30 +257,50 @@ CREATE TABLE public.video (
     idch character(24) NOT NULL,
     title character(100) DEFAULT ''::bpchar,
     description character varying(5000),
-    publishedat timestamp with time zone
+    publishedat timestamp with time zone,
+    duration bigint
 );
+
 
 
 ALTER TABLE ONLY public.metric ALTER COLUMN id SET DEFAULT nextval('public.metrics_id_seq'::regclass);
 
-ALTER TABLE ONLY public.metric
-    ADD CONSTRAINT metrics_pkey PRIMARY KEY (id);
+
 
 ALTER TABLE ONLY public.channel
     ADD CONSTRAINT channel_pkey PRIMARY KEY (id);
 
+
+
+ALTER TABLE ONLY public.metric
+    ADD CONSTRAINT metrics_pkey PRIMARY KEY (id);
+
+
+
 ALTER TABLE ONLY public.video
     ADD CONSTRAINT video_pkey PRIMARY KEY (id);
 
+
+
 CREATE INDEX metric_idvideo_timemetric_idx ON public.metric USING btree (idvideo, timemetric);
+
+
 
 CREATE INDEX video_idch_idx ON public.video USING btree (idch);
 
+
+
 CREATE TRIGGER tr_change_video AFTER INSERT OR DELETE ON public.video FOR EACH ROW EXECUTE PROCEDURE public.change_video();
+
+
 
 ALTER TABLE ONLY public.metric
     ADD CONSTRAINT metrics_idv_fkey FOREIGN KEY (idvideo) REFERENCES public.video(id);
 
+
+
 ALTER TABLE ONLY public.video
     ADD CONSTRAINT video_idch_fkey FOREIGN KEY (idch) REFERENCES public.channel(id);
+
+
 

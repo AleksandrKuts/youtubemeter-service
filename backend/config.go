@@ -1,4 +1,4 @@
-package config
+package backend
 
 import (
 	"flag"
@@ -14,21 +14,21 @@ var (
 	Timeout = flag.Duration("timeout", time.Second * 15, "")
 	ListenAdmin = flag.Bool("ListenAdmin", false, "")
 	Origin = flag.String("Origin", "*", "")
-	MaxViewVideosInPlayLists = flag.Int("MaxViewVideosInPlayLists", 30, "")
+	MaxViewVideosInChannel = flag.Int("MaxViewVideosInChannel", 30, "")
 
 	EnableTLS = flag.Bool("enableTLS", false, "")
 	SSLcertFile = flag.String("certFile", "certFile", "")
 	SSLkeyFile = flag.String("keyFile", "keyFile", "")
 
 	EnableCache = flag.Bool("enableCache", true, "Enable cache?")
-	PeriodPlayListCache = flag.Duration("periodPlayListCache", time.Minute * 30, "")
+	PeriodChannelCache = flag.Duration("periodChannelCache", time.Minute * 30, "")
 	PeriodMeterCache = flag.Duration("periodMetricCache", time.Second * 60, "")	
 	PeriodCollectionCache = flag.Duration("periodCollectCache", time.Hour * 24 * 14, "")
 	PeriodVideoCache = flag.Duration("periodVideoCache", time.Minute * 5, "")
 
 	MaxSizeCacheVideo = flag.Int("maxSizeCacheVideo", 1000, "")
 	MaxSizeCacheVideoDescription = flag.Int("maxSizeCacheVideoDescription", 1000, "")
-	MaxSizeCachePlaylists = flag.Int("maxSizeCachePlaylists", 1000, "")
+	MaxSizeCacheChannels = flag.Int("maxSizeCacheChannels", 1000, "")
 
 	debugLevel = flag.String("debugLevel", "info", "")
 	Log = flag.String("Log", "backend.log", "")
@@ -108,13 +108,13 @@ func init() {
 	Logger.Debugf("timeout=%v", *Timeout)
 	Logger.Debugf("ListenAdmin=%v", *ListenAdmin)
 	Logger.Debugf("Origin=%v", *Origin)
-	Logger.Debugf("MaxViewVideosInPlayLists=%v", *MaxViewVideosInPlayLists)
+	Logger.Debugf("MaxViewVideosInChannel=%v", *MaxViewVideosInChannel)
 
 	Logger.Debugf("EnableTLS=%v", *EnableTLS)
 	Logger.Debugf("SSLkeyFile=%v", *SSLkeyFile)
 	Logger.Debugf("SSLcertFile=%v", *SSLcertFile)
 		
-	Logger.Debugf("PeriodPlayListCache=%v", *PeriodPlayListCache)
+	Logger.Debugf("PeriodChannelCache=%v", *PeriodChannelCache)
 	Logger.Debugf("PeriodVideoCache=%v", *PeriodVideoCache)
 	Logger.Debugf("PeriodMeterCache=%v", *PeriodMeterCache)
 	Logger.Debugf("PeriodСollectionCache=%v", *PeriodCollectionCache)
@@ -122,7 +122,7 @@ func init() {
 	Logger.Debugf("EnableCache=%v", *EnableCache)
 	Logger.Debugf("MaxSizeCacheVideo=%v", *MaxSizeCacheVideo)
 	Logger.Debugf("MaxSizeCacheVideoDescription=%v", *MaxSizeCacheVideoDescription)	
-	Logger.Debugf("MaxSizeCachePlaylists=%v", *MaxSizeCachePlaylists)
+	Logger.Debugf("MaxSizeCacheChannels=%v", *MaxSizeCacheChannels)
 
 	Logger.Debugf("dbhost=%s", *DBHost)
 	Logger.Debugf("dbport=%s", *DBPort)	

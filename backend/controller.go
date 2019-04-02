@@ -1,9 +1,8 @@
-package server
+package backend
 
 import (
 	"context"
 	"encoding/json"
-	"github.com/AleksandrKuts/youtubemeter-service/backend/config"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
@@ -20,18 +19,17 @@ const CONTENT_TYPE_VALUE = "application/json"
 var version string
 
 func init() {
-	log = config.Logger
 }
 
 func StartService(versionMajor, versionMin string) {
-	log.Warnf("server start, version: %s.%s", versionMajor, versionMin)
+	Logger.Warnf("server start, version: %s.%s", versionMajor, versionMin)
 	version = versionMajor + "." + versionMin
-	log.Debugf("port=%s", *config.Addr)
+	Logger.Debugf("port=%s", *Addr)
 
 	r := newRouter()
 
 	srv := &http.Server{
-		Addr: *config.Addr,
+		Addr: *Addr,
 		// Good practice to set timeouts to avoid Slowloris attacks.
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
@@ -43,16 +41,16 @@ func StartService(versionMajor, versionMin string) {
 	go func() {
 		var err error
 				
-		if *config.EnableTLS {
-			log.Info("server started with TLS")
-			err = srv.ListenAndServeTLS(*config.SSLcertFile, *config.SSLkeyFile);
+		if *EnableTLS {
+			Logger.Info("server started with TLS")
+			err = srv.ListenAndServeTLS(*SSLcertFile, *SSLkeyFile);
 		} else {
-			log.Info("server started")
+			Logger.Info("server started")
 			err = srv.ListenAndServe();
 		}
 		
 		if err != nil {
-			log.Fatal(err)
+			Logger.Fatal(err)
 		}
 	}()
 
@@ -65,7 +63,7 @@ func StartService(versionMajor, versionMin string) {
 	<-c
 
 	// Create a deadline to wait for.
-	ctx, cancel := context.WithTimeout(context.Background(), *config.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), *Timeout)
 	defer cancel()
 	// Doesn't block if no connections, but will otherwise wait
 	// until the timeout deadline.
@@ -74,7 +72,7 @@ func StartService(versionMajor, versionMin string) {
 	// <-ctx.Done() if your application should wait for other services
 	// to finalize based on context cancellation.
 	closeDB()
-	log.Info("server shutting down")
+	Logger.Info("server shutting down")
 	os.Exit(0)
 }
 
@@ -85,10 +83,10 @@ func newRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.Use(handlerMiddleware)
 
-	r.HandleFunc("/playlists", getPlaylistsHandler).Methods("GET")
+	r.HandleFunc("/channels", getPlaylistsHandler).Methods("GET")
 
-	if *config.ListenAdmin {
-		routeAdminPlaylist := r.PathPrefix("/playlists/admin").Subrouter()
+	if *ListenAdmin {
+		routeAdminPlaylist := r.PathPrefix("/channels/admin").Subrouter()
 		routeAdminPlaylist.Methods("GET").HandlerFunc(getPlaylistsHandlerAdmin)
 		routeAdminPlaylist.Methods("OPTIONS", "POST").HandlerFunc(appendPlaylistHandler)
 		routeAdminPlaylist.Path("/{id}").Methods("OPTIONS", "PUT").HandlerFunc(updatePlaylistHandler)
@@ -98,7 +96,7 @@ func newRouter() *mux.Router {
 	routeVideo := r.PathPrefix("/view").Subrouter()
 	routeVideo.Path("/counts").Methods("GET").HandlerFunc(getGlobalCountsHandler)
 	routeVideo.Path("/videos").Methods("GET").HandlerFunc(getVidesHandler)
-	routeVideo.Path("/videos/{id}").Methods("GET").HandlerFunc(getVideoByIdPlayListHandler)
+	routeVideo.Path("/videos/{id}").Methods("GET").HandlerFunc(getVideoByIdChannelHandler)
 	routeVideo.Path("/video/{id}").Methods("GET").HandlerFunc(getVideoByIdHandler)
 	routeVideo.Path("/metrics/{id}").Methods("GET").HandlerFunc(getMetricsByVideoIdHandler)
 
@@ -112,29 +110,29 @@ func printRouter(r *mux.Router) {
 	err := r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		pathTemplate, err := route.GetPathTemplate()
 		if err == nil {
-			log.Debugf("ROUTE=%s", pathTemplate)
+			Logger.Debugf("ROUTE=%s", pathTemplate)
 		}
 		pathRegexp, err := route.GetPathRegexp()
 		if err == nil {
-			log.Debugf("Path regexp=%s", pathRegexp)
+			Logger.Debugf("Path regexp=%s", pathRegexp)
 		}
 		queriesTemplates, err := route.GetQueriesTemplates()
 		if err == nil {
-			log.Debugf("Queries templates=%s", strings.Join(queriesTemplates, ","))
+			Logger.Debugf("Queries templates=%s", strings.Join(queriesTemplates, ","))
 		}
 		queriesRegexps, err := route.GetQueriesRegexp()
 		if err == nil {
-			log.Debugf("Queries regexps=%s", strings.Join(queriesRegexps, ","))
+			Logger.Debugf("Queries regexps=%s", strings.Join(queriesRegexps, ","))
 		}
 		methods, err := route.GetMethods()
 		if err == nil {
-			log.Debugf("Methods=%s", strings.Join(methods, ","))
+			Logger.Debugf("Methods=%s", strings.Join(methods, ","))
 		}
 		return nil
 	})
 
 	if err != nil {
-		log.Debug(err)
+		Logger.Debug(err)
 	}
 }
 
@@ -143,10 +141,10 @@ func handlerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		method := r.Method
 		origin := r.Header.Get("Origin")
-		log.Infof("method: %v, uri: %v, addr: %v, origin: [%v], host: %v", method, r.RequestURI, r.RemoteAddr, origin, r.Host)
+		Logger.Infof("method: %v, uri: %v, addr: %v, origin: [%v], host: %v", method, r.RequestURI, r.RemoteAddr, origin, r.Host)
 
 		// Перевірка на валідний Origin  
-		if origin == *config.Origin {
+		if origin == *Origin {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 			w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
@@ -158,7 +156,7 @@ func handlerMiddleware(next http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 			}
 		} else {
-			log.Errorf("invalid origin: [%v] != [%v] ",origin, *config.Origin)
+			Logger.Errorf("invalid origin: [%v] != [%v] ",origin, *Origin)
 			http.Error(w, "Access denied", http.StatusForbidden)
 			return
 		}
@@ -172,7 +170,7 @@ func parseBody(r *http.Request, i interface{}) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("body=%v", string(b))
+	Logger.Debugf("body=%v", string(b))
 
 	err = json.Unmarshal(b, i)
 	if err != nil {
@@ -186,18 +184,18 @@ func parseBody(r *http.Request, i interface{}) error {
 func appendPlaylistHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	req := q.Get("req")
-	log.Debugf("req=%v(%v)", req, formatStringDate(req))
+	Logger.Debugf("req=%v(%v)", req, formatStringDate(req))
 
-	var playlist PlayList
-	err := parseBody(r, &playlist)
+	var channel Channel
+	err := parseBody(r, &channel)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	log.Debugf("playlist=%v", playlist)
+	Logger.Debugf("channel=%v", channel)
 
-	err = addPlayList(&playlist)
+	err = addChannel(&channel)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -205,7 +203,7 @@ func appendPlaylistHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
-	log.Warnf("appended playlist=%v", playlist)
+	Logger.Warnf("appended channel=%v", channel)
 }
 
 // Оброблювач запиту на оновлення плей-листа
@@ -215,25 +213,25 @@ func updatePlaylistHandler(w http.ResponseWriter, r *http.Request) {
 
 	q := r.URL.Query()
 	req := q.Get("req")
-	log.Debugf("req=%v(%v)", req, formatStringDate(req))
+	Logger.Debugf("req=%v(%v)", req, formatStringDate(req))
 
-	var playlist PlayList
-	err := parseBody(r, &playlist)
+	var channel Channel
+	err := parseBody(r, &channel)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	log.Debugf("playlist=%v", playlist)
+	Logger.Debugf("channel=%v", channel)
 
-	err = updatePlayList(id, &playlist)
+	err = updateChannel(id, &channel)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	log.Infof("updated playlist=%v", playlist)
+	Logger.Infof("updated channel=%v", channel)
 }
 
 // Оброблювач запиту на видалення плей-листа
@@ -244,9 +242,9 @@ func deletePlaylistHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	req := q.Get("req")
 
-	log.Debugf("req=%v(%v)", req, formatStringDate(req))
+	Logger.Debugf("req=%v(%v)", req, formatStringDate(req))
 
-	err := deletePlayList(id)
+	err := deleteChannel(id)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -254,7 +252,7 @@ func deletePlaylistHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	log.Infof("deleted playlist with id=%v", id)
+	Logger.Infof("deleted channel with id=%v", id)
 }
 
 func formatStringDate(sdt string) string {
@@ -271,9 +269,9 @@ func getPlaylistsHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	req := q.Get("req")
 	enable := q.Get("enable")
-	log.Debugf("req=%v(%v), active=%v", req, formatStringDate(req), enable)
+	Logger.Debugf("req=%v(%v), active=%v", req, formatStringDate(req), enable)
 
-	playlistJson, err := getPlaylists(true)
+	channelJson, err := getPlaylists(true)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -281,19 +279,19 @@ func getPlaylistsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
-	//		w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(playlistJson)))
+	//		w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(channelJson)))
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(playlistJson)
+	w.Write(channelJson)
 }
 
 // Оброблювач запиту на отримання всіх плей-листів для для адміністрування
 func getPlaylistsHandlerAdmin(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	req := q.Get("req")
-	log.Debugf("req=%v(%v)", req, formatStringDate(req))
+	Logger.Debugf("req=%v(%v)", req, formatStringDate(req))
 
-	playlistJson, err := getPlaylists(false)
+	channelJson, err := getPlaylists(false)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -301,10 +299,10 @@ func getPlaylistsHandlerAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(CONTENT_TYPE_KEY, CONTENT_TYPE_VALUE)
-	//		w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(playlistJson)))
+	//		w.Header().Set(CONTENT_LENGTH_KEY, strconv.Itoa(len(channelJson)))
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(playlistJson)
+	w.Write(channelJson)
 }
 
 // Оброблювач запиту на отриматння метрик по відео id за заданий період
@@ -321,7 +319,7 @@ func getMetricsByVideoIdHandler(w http.ResponseWriter, r *http.Request) {
 	req := q.Get("req")
 	from := q.Get("from")
 	to := q.Get("to")
-	log.Debugf("req=%v(%v), id=%v, from=%v, to=%v", req, formatStringDate(req), id, from, to)
+	Logger.Debugf("req=%v(%v), id=%v, from=%v, to=%v", req, formatStringDate(req), id, from, to)
 
 	metricsVideoJson, err := getMetricsById(id, from, to)
 
@@ -349,7 +347,7 @@ func getVideoByIdHandler(w http.ResponseWriter, r *http.Request) {
 
 	q := r.URL.Query()
 	req := q.Get("req")
-	log.Debugf("id: %v, req: %v(%v)", id, req, formatStringDate(req))
+	Logger.Debugf("id: %v, req: %v(%v)", id, req, formatStringDate(req))
 
 	videoJson, err := getVideoById(id)
 
@@ -377,7 +375,7 @@ func getVidesHandler(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
-	log.Debugf("req=%v(%v), offset=%v", req, formatStringDate(req), offset)
+	Logger.Debugf("req=%v(%v), offset=%v", req, formatStringDate(req), offset)
 
 	videosJson, err := getVideos(offset)
 
@@ -395,7 +393,7 @@ func getVidesHandler(w http.ResponseWriter, r *http.Request) {
 
 
 // Оброблювач запиту на отримання списку відео id плейлиста
-func getVideoByIdPlayListHandler(w http.ResponseWriter, r *http.Request) {
+func getVideoByIdChannelHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
@@ -408,9 +406,9 @@ func getVideoByIdPlayListHandler(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
-	log.Debugf("req=%v(%v), id=%v, offset=%v", req, formatStringDate(req), id, offset)
+	Logger.Debugf("req=%v(%v), id=%v, offset=%v", req, formatStringDate(req), id, offset)
 
-	videosJson, err := getVideosByPlayListId(id, offset)
+	videosJson, err := getVideosByChannelId(id, offset)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -429,7 +427,7 @@ func getVideoByIdPlayListHandler(w http.ResponseWriter, r *http.Request) {
 func getGlobalCountsHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	req := q.Get("req")
-	log.Debugf("req=%v", req)
+	Logger.Debugf("req=%v", req)
 
 	globalCountsJson, err := getGlobalCounts(version)
 

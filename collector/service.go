@@ -14,11 +14,14 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/youtube/v3"
+	
+	"github.com/peterhellberg/duration"	
 )
 
 const LAYOUT_ISO_8601 = "2006-01-02T15:04:05Z"
 const CHANNEL_PART = "snippet,id"
-const VIDEOS_PART = "snippet,contentDetails,statistics"
+const VIDEOS_PART = "statistics"
+const VIDEOS_PART_DETAILS = "contentDetails"
 
 const missingClientSecretsMessage = `
 Please configure OAuth 2.0
@@ -347,6 +350,24 @@ func checkElapsedVideos(channel *YoutubeChannel) {
 		countDeleted)
 }
 
+func getVideoDetails(channelId, videoId string ) *youtube.VideoContentDetails {
+	call := service.Videos.List(VIDEOS_PART_DETAILS)
+	call = call.Id(videoId)
+
+	response, err := call.Do()
+	if err != nil {
+		Logger.Errorf("ch: %v, error get video details by ids=%v, error=%v", channelId, videoId, err)
+		return nil
+	}
+
+	if len(response.Items) > 0 {
+		return response.Items[0].ContentDetails
+	}
+	
+	return nil
+}
+
+
 // додаємо відео для збору статистики
 func addVideo(channel *YoutubeChannel, videoId string, snippet *youtube.SearchResultSnippet) {
 	channelId := channel.Id
@@ -372,8 +393,16 @@ func addVideo(channel *YoutubeChannel, videoId string, snippet *youtube.SearchRe
 		return
 	}
 
+	var videoDuration time.Duration
+	videoDetails := getVideoDetails(channelId, videoId)
+	if videoDetails != nil {
+		if d, err := duration.Parse(videoDetails.Duration); err == nil {
+			videoDuration = d  
+		}
+	}
+
 	// відео пройшло перевірку, додаємо його для збору статистики
-	err = AddVideoToDB(videoId, channelId, timePublishedAt, title, description)
+	err = AddVideoToDB(videoId, channelId, timePublishedAt, title, description, videoDuration)
 	if err != nil {
 		Logger.Error(err)
 		return

@@ -1,57 +1,49 @@
-package server
+package backend
 
 import (
 	"time"
 )
 
 // Channel: A channel resource contains information about a YouTube
-type PlayList struct {
-	// Id: The ID that YouTube uses to uniquely identify the playlist.
+type Channel struct {
+	// Id: The ID that YouTube uses to uniquely identify the channel.
 	Id string `json:"id"`
 
-	// Title: The playlist's title.
+	// Title: The Channels's title.
 	Title string `json:"title"`
 
-	// Enable: if playlist is enabled
+	// Enable: if channel is enabled
 	Enable bool `json:"enable"`
 
-	// Id: The ID that YouTube uses to uniquely identify the channel.
-	Idch string `json:"idch"`
-	
-	// The date and time that the item was added to the list PlayLists
+	// The date and time that the item was added
 	Timeadd time.Time `json:"timeadd"`
 	
+	// count videos
 	Countvideo int `json:"countvideo"`
 }
 
-type ResponcePlayList struct {
+type ResponseChannel struct {
 	MaxVideoCount  int `json:"maxvideocount"`
-	PlayLists []PlayList `json:"playlists"`  
+	Channels []Channel `json:"channels"`  
 }
 
 // Video: A video resource represents a YouTube video.
 type YoutubeVideo struct {
-	// PlaylistId: The ID that YouTube uses to uniquely identify the
-	// playlist that the playlist item is in.
-	PlaylistId string `json:"idpl"`
-
 	// Title: The item's title.
 	Title string `json:"title"`
 
 	// Description: The item's description.
 	Description string `json:"description"`
 
+	// ChannelId: The ID that YouTube uses to uniquely identify the user
+	// that added the item
+	ChannelId string `json:"idch"`
 
-	// ChannelTitle: Channel title for the channel that the playlist item
-	// belongs to.
+	// ChannelTitle: Channel title for the channel
 	ChannelTitle string `json:"chtitle"`
 
-	// ChannelId: The ID that YouTube uses to uniquely identify the user
-	// that added the item to the playlist.
-	ChannelId string `json:"chid"`
-
-	// PublishedAt: The date and time that the item was added to the
-	// playlist. The value is specified in ISO 8601 (YYYY-MM-DDThh:mm:ss.sZ)
+	// PublishedAt: The date and time that the item was added. 
+	// The value is specified in ISO 8601 (YYYY-MM-DDThh:mm:ss.sZ)
 	// format.
 	PublishedAt time.Time `json:"publishedat"`
 
@@ -71,13 +63,16 @@ type YoutubeVideoShort struct {
 	// Title: The item's title.
 	Title string `json:"title"`
 
-	// PublishedAt: The date and time that the item was added to the
-	// playlist. The value is specified in ISO 8601 (YYYY-MM-DDThh:mm:ss.sZ)
+	// PublishedAt: The date and time that the item was added.
+	// The value is specified in ISO 8601 (YYYY-MM-DDThh:mm:ss.sZ)
 	// format.
 	PublishedAt time.Time `json:"publishedat"`
 	
-	// Title: The playlist's title.
+	// Chanel: The chanel's title.
 	Ptitle string `json:"ptitle"`
+
+	// Chanel: The chanel's title.
+	Duration time.Duration `json:"duration"`
 }
 
 // Metric: A video resource represents a metric YouTube video.
@@ -100,25 +95,25 @@ type Metrics struct {
 	Time time.Time `json:"mtime"`
 }
 
-// Структура для кешу списка плейлистів 
-type ListPlayListInCache struct {
-	// Час останнього запиту списку плейлистів
+// Структура для кешу каналів
+type ListChannelInCache struct {
+	// Час останнього запиту списку каналів
 	timeUpdate time.Time  
 	
 	// Дані по відео 
 	responce []byte
 }
 
-func (l *ListPlayListInCache) update( responce []byte) {
+func (l *ListChannelInCache) update( responce []byte) {
 	l.timeUpdate = time.Now()
 	l.responce = responce
 }
 
-func (l *ListPlayListInCache) reset() {
+func (l *ListChannelInCache) reset() {
 	l.timeUpdate = MIN_TIME
 }
 
-// Структура для кешу списку відео без плейлиста
+// Структура для кешу списку відео
 type YoutubeVideoShortInCache struct {
 	// Час останнього запиту списку відео
 	timeUpdate time.Time  
@@ -137,7 +132,7 @@ type VideoInCache struct {
 	// Данні за цей період не змінюються (максимум додасться одна метрика)
 	updateVideo time.Time
 	
-	// Час додавання відео в плейлист. Поза періодом збору метрик, який рахується з даного часу дані вже не міняються
+	// Час додавання відео. Поза періодом збору метрик, який рахується з даного часу дані вже не міняються
 	// тому беруться тільки з кешу
 	publishedAt time.Time
 	
@@ -159,13 +154,13 @@ func (v *VideoInCache) updateCacheMetrics(metricsResponce []byte) {
 	v.metricsResponce = metricsResponce
 }
 
-// Структура для кешу списку відео без плейлиста
+// Структура для кешу списку відео
 type GlobalCounts struct {
 	// Час останнього запиту списку відео
 	TimeUpdate time.Time `json:"timeupdate"`
 	
-	// Кількість плейлистів 
-	CountPlaylists int `json:"countpl"`
+	// Кількість каналів
+	CountChannels int `json:"countch"`
 	
 	// Кількість відео 
 	CountVideos int `json:"countvideo"`
