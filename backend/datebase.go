@@ -337,13 +337,12 @@ func getVideosByChannelIdFromDB(id string, offset int) ([]byte, error) {
 
 // Отримати опис відео по його id
 func getGlobalCountsFromDB(version string) ( *GlobalCounts, error) {
-	var countChannels int
-	var countVideos int
+	var countChannels int = 0
+	var countVideos int = 0
 
 	err := db.QueryRow(GET_GLOBAL_COUNTS).Scan(&countChannels, &countVideos)
 	if err != nil {
-		Logger.Errorf("Error get global counts: %v", err)
-		return nil, err
+		Logger.Errorf("Error get global counts from DB: %v", err)
 	}
 	
 	globalCounts := &GlobalCounts{CountChannels: countChannels, CountVideos: countVideos, TimeUpdate: time.Now(), 
