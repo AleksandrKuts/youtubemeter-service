@@ -14,14 +14,15 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/youtube/v3"
-	
-	"github.com/peterhellberg/duration"	
+
+	"github.com/peterhellberg/duration"
 )
 
 const LAYOUT_ISO_8601 = "2006-01-02T15:04:05Z"
 const CHANNEL_PART = "snippet,id"
 const VIDEOS_PART = "statistics"
 const VIDEOS_PART_DETAILS = "contentDetails"
+const LIVE_BROADCAST_CONTENT = "live"
 
 const missingClientSecretsMessage = `
 Please configure OAuth 2.0
@@ -290,7 +291,7 @@ func checkChannelVideos(channel *YoutubeChannel) {
 	call = call.PublishedAfter(t.Format(LAYOUT_ISO_8601))
 
 	Logger.Debugf("ch: %v, PublishedAfter: %v", channel.Id, t)
-	
+
 	response, err := call.Do()
 	if err != nil {
 		Logger.Errorf("ch: %v, error get channels: %v", channel.Id, err)
@@ -306,16 +307,38 @@ func checkChannelVideos(channel *YoutubeChannel) {
 		if ok == false { // такого відео ще нема, пробуємо додати
 			addVideo(channel, videoId, item.Snippet)
 		} else {
+			isUpdate := false
+
+			// Чи не потрібно занести дані по тривалості відео (наприклад закінчився стрим і появився його запис)
+			if item.Snippet.LiveBroadcastContent != LIVE_BROADCAST_CONTENT && video.Duration == 0 {
+				videoDetails := getVideoDetails(channel.Id, videoId)
+				if videoDetails != nil {
+					if d, err := duration.Parse(videoDetails.Duration); err == nil {
+						video.Duration = d
+						isUpdate = true
+					} else {
+						Logger.Error("ch: %v, video: %v, error parse duration: %v",
+							channel.Id, videoId, videoDetails.Duration)
+					}
+				}
+			}
+
 			// Відео змінило опис
 			if video.Title != item.Snippet.Title {
-				err = UpdateVideoInDB(videoId, item.Snippet.Title)
+				isUpdate = true
+				video.Title = item.Snippet.Title
+			}
+
+			if isUpdate {
+				err = UpdateVideoInDB(videoId, video)
 				if err != nil {
 					Logger.Error(err)
 					continue
 				}
-				Logger.Infof("ch: %v, video: %v, update title[ %v] --> [%v]", channel.Id, videoId, video.Title, item.Snippet.Title)
-				video.Title = item.Snippet.Title
+				Logger.Infof("ch: %v, video: %v, update -> title: %v, duration: %v", 
+					channel.Id, videoId, video.Title, video.Duration)
 			}
+
 		}
 	}
 	Logger.Infof("ch: %v, count videos: %v", channel.Id, len(channel.Videos))
@@ -350,7 +373,7 @@ func checkElapsedVideos(channel *YoutubeChannel) {
 		countDeleted)
 }
 
-func getVideoDetails(channelId, videoId string ) *youtube.VideoContentDetails {
+func getVideoDetails(channelId, videoId string) *youtube.VideoContentDetails {
 	call := service.Videos.List(VIDEOS_PART_DETAILS)
 	call = call.Id(videoId)
 
@@ -363,10 +386,9 @@ func getVideoDetails(channelId, videoId string ) *youtube.VideoContentDetails {
 	if len(response.Items) > 0 {
 		return response.Items[0].ContentDetails
 	}
-	
+
 	return nil
 }
-
 
 // додаємо відео для збору статистики
 func addVideo(channel *YoutubeChannel, videoId string, snippet *youtube.SearchResultSnippet) {
@@ -394,10 +416,14 @@ func addVideo(channel *YoutubeChannel, videoId string, snippet *youtube.SearchRe
 	}
 
 	var videoDuration time.Duration
-	videoDetails := getVideoDetails(channelId, videoId)
-	if videoDetails != nil {
-		if d, err := duration.Parse(videoDetails.Duration); err == nil {
-			videoDuration = d  
+
+	// Якщо це не пряма трансляція отримуємо тривалість відео
+	if alive != LIVE_BROADCAST_CONTENT {
+		videoDetails := getVideoDetails(channelId, videoId)
+		if videoDetails != nil {
+			if d, err := duration.Parse(videoDetails.Duration); err == nil {
+				videoDuration = d
+			}
 		}
 	}
 

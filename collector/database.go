@@ -14,7 +14,7 @@ const TIME_LAYOUT = "2006-01-02T15:04:05.999999-07:00"
 
 const GET_CHANNELS = "SELECT id FROM channel ch WHERE enable = true"
 
-const GET_CHANNELS_WITH_VIDEO = "SELECT ch.id, v.id as vid, v.publishedat, TRIM(v.title) " +
+const GET_CHANNELS_WITH_VIDEO = "SELECT ch.id, v.id as vid, v.publishedat, TRIM(v.title), v.duration " +
 	"FROM channel ch " +
 	"LEFT JOIN video v ON v.idch = ch.id AND v.publishedat > $1 " +
 	"WHERE ch.enable = true " +
@@ -25,7 +25,7 @@ const INSERT_VIDEO = "INSERT INTO video ( id, idch, publishedat, title, descript
 	"ON CONFLICT (id) DO UPDATE SET " +
 	"publishedat = EXCLUDED.publishedat, title = EXCLUDED.title, description = EXCLUDED.description"
 
-const UPDATE_VIDEO = "UPDATE video SET title = $1 WHERE id = $2"
+const UPDATE_VIDEO = "UPDATE video SET title = $2, duration = $3 WHERE id = $1"
 
 const INSERT_METRICS = "INSERT INTO metric ( idVideo, CommentCount, LikeCount, DislikeCount, ViewCount ) " +
 	"VALUES ( $1, $2, $3, $4, $5 )"
@@ -88,9 +88,10 @@ func GetChannelsWithVideoFromDB() (YoutubeChannels, error) {
 		var videoId string
 		var publishedat time.Time
 		var title string
+		var duration time.Duration
 
-		rows.Scan(&id, &videoId, &publishedat, &title)
-		Logger.Debugf("ch: %v, video: %v, publishedat: %v, title: %v", id, videoId, publishedat, title)
+		rows.Scan(&id, &videoId, &publishedat, &title, &duration)
+		Logger.Debugf("ch: %v, video: %v, publishedat: %v, title: %v, duration: %v", id, videoId, publishedat, title, duration)
 
 		if ch != id {
 			channels.Append(id)
@@ -98,7 +99,7 @@ func GetChannelsWithVideoFromDB() (YoutubeChannels, error) {
 		}
 		if videoId != "" {
 			channels.Channels[id].Append(videoId, &YoutubeVideo{PublishedAt: publishedat, 
-					Deleted: false, Title: title})
+					Deleted: false, Title: title, Duration: duration})
 		}
 	}
 	err = rows.Err()
@@ -168,12 +169,12 @@ func AddVideoToDB(id, idch string, publishedat time.Time, title, description str
 }
 
 // Оновити опис відео
-func UpdateVideoInDB(id, title string) error {
+func UpdateVideoInDB(id string, video *YoutubeVideo) error {
 	if id == "" {
 		return errors.New("Error update video, id is null")
 	}
 
-	res, err := db.Exec(UPDATE_VIDEO, title, id)
+	res, err := db.Exec(UPDATE_VIDEO, id, video.Title, video.Duration)
 	if err != nil {
 		Logger.Errorf("err=%v", err)
 		return err
@@ -184,7 +185,7 @@ func UpdateVideoInDB(id, title string) error {
 		Logger.Errorf("err=%v", err)
 		return err
 	} else {
-		Logger.Debugf("update video: id=%v, title=%v", id, title)
+		Logger.Debugf("update video: id: %v, title: %v, duration: %v", id, video.Title, video.Duration)
 	}
 
 	return nil

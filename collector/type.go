@@ -37,6 +37,8 @@ type YoutubeVideo struct {
 	// Time elapsed since deleted video
 	TimeDeleted time.Time
 			
+	// Time elapsed since deleted video
+	Duration time.Duration
 }
 
 func (video *YoutubeVideo) SetMetrics(CommentCount, LikeCount, DislikeCount, ViewCount uint64) {
