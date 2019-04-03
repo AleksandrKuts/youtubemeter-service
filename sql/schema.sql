@@ -181,7 +181,7 @@ $$;
 
 
 
-CREATE FUNCTION public.return_video(_idv character, OUT _title character, OUT _description character, OUT _idch character, OUT _chtitle character, OUT _publishedat timestamp with time zone, OUT _count_metrics integer, OUT _min_timemetric timestamp with time zone, OUT _max_timemetric timestamp with time zone) RETURNS record
+CREATE FUNCTION public.return_video(_idv character, OUT _title character, OUT _description character, OUT _idch character, OUT _chtitle character, OUT _publishedat timestamp with time zone, OUT _count_metrics integer, OUT _min_timemetric timestamp with time zone, OUT _max_timemetric timestamp with time zone, OUT _duration bigint) RETURNS record
     LANGUAGE plpgsql
     AS $$
 
@@ -189,12 +189,10 @@ CREATE FUNCTION public.return_video(_idv character, OUT _title character, OUT _d
     _id varchar;
     
   BEGIN
-	RAISE NOTICE '1 (%, %)', _idv, _id;
-	SELECT id, title, TRIM(description), idch, publishedat
+	SELECT id, title, TRIM(description), idch, publishedat, duration
 	FROM video
 	WHERE id = _idv 
-	INTO _id, _title, _description, _idch, _publishedat;
-	RAISE NOTICE '2 (%, %)', _idv, _id;
+	INTO _id, _title, _description, _idch, _publishedat, _duration;
 
 	/* Перевірка чи є дані по відео*/
 	IF _id IS NULL THEN
@@ -258,7 +256,7 @@ CREATE TABLE public.video (
     title character(100) DEFAULT ''::bpchar,
     description character varying(5000),
     publishedat timestamp with time zone,
-    duration bigint
+    duration bigint DEFAULT 0
 );
 
 
