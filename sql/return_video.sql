@@ -8,19 +8,18 @@ CREATE OR REPLACE FUNCTION public.return_video(
   OUT _publishedat timestamp with time zone,  /* Час публікації відео */
   OUT _count_metrics int /* Кількість метрик */,
   OUT _min_timemetric timestamp with time zone, /* максимальний час метрики */
-  OUT _max_timemetric timestamp with time zone) /* мінімальний час метрики */ AS
+  OUT _max_timemetric timestamp with time zone, /* мінімальний час метрики */ 
+  OUT _duration bigint) /* тривалість відео */ AS
 $BODY$
 
   DECLARE
     _id varchar;
     
   BEGIN
-	RAISE NOTICE '1 (%, %)', _idv, _id;
-	SELECT id, title, TRIM(description), idch, publishedat
+	SELECT id, title, TRIM(description), idch, publishedat, duration
 	FROM video
 	WHERE id = _idv 
-	INTO _id, _title, _description, _idch, _publishedat;
-	RAISE NOTICE '2 (%, %)', _idv, _id;
+	INTO _id, _title, _description, _idch, _publishedat, _duration;
 
 	/* Перевірка чи є дані по відео*/
 	IF _id IS NULL THEN

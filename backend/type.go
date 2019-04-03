@@ -52,6 +52,9 @@ type YoutubeVideo struct {
 	MinTimeMetric time.Time `json:"mintime"`
 
 	MaxTimeMetric time.Time `json:"maxtime"`	
+
+	// Chanel: The chanel's title.
+	Duration time.Duration `json:"duration"`
 }
 
 
@@ -73,6 +76,9 @@ type YoutubeVideoShort struct {
 
 	// Chanel: The chanel's title.
 	Duration time.Duration `json:"duration"`
+
+	//  VideoId: The ID that YouTube uses to uniquely identify the video
+	Idch string `json:"idch"`
 }
 
 // Metric: A video resource represents a metric YouTube video.
