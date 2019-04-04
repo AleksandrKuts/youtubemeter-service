@@ -161,8 +161,8 @@ func AddVideoToDB(id, idch string, publishedat time.Time, title, description str
 		Logger.Errorf("err=%v", err)
 		return err
 	} else {
-		Logger.Debugf("insert video: id: %v, idpl: %v, publishedat: %v, title: %v, videoDuration: %v", id, idch,
-			publishedat, title)
+		Logger.Debugf("insert video: id: %v, idch: %v, publishedat: %v, title: %v, videoDuration: %v", id, idch,
+			publishedat, title, videoDuration)
 	}
 
 	return nil

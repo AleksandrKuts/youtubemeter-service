@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"time"
+	"html"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
@@ -324,9 +325,10 @@ func checkChannelVideos(channel *YoutubeChannel) {
 			}
 
 			// Відео змінило опис
-			if video.Title != item.Snippet.Title {
+			newTitle := html.UnescapeString(item.Snippet.Title)
+			if video.Title != newTitle {
 				isUpdate = true
-				video.Title = item.Snippet.Title
+				video.Title = newTitle
 			}
 
 			if isUpdate {
@@ -398,7 +400,7 @@ func addVideo(channel *YoutubeChannel, videoId string, snippet *youtube.SearchRe
 		return
 	}
 
-	title := snippet.Title
+	title := html.UnescapeString(snippet.Title)
 	publishedAt := snippet.PublishedAt
 	description := snippet.Description
 	alive := snippet.LiveBroadcastContent
