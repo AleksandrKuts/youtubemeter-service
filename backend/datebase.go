@@ -295,7 +295,7 @@ func getVideosByChannelIdFromDB(id string, offset int) ([]byte, error) {
 	}
 
 	if err != nil {
-		Logger.Errorf("Error get videos by plailist id: %v", err)
+		Logger.Errorf("Error get videos by channel id: %v", err)
 		return nil, err
 	}
 
