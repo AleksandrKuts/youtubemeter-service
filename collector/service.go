@@ -255,7 +255,7 @@ func getRequestChannel() (map[string]*YoutubeChannel, map[string]*YoutubeChannel
 	for id, channel := range channels.Channels {
 		if !channel.Deleted { // додаються тільки робочі плейлисти
 			if channel.Idpl == "" {
-				requestPlaylist[id] = channel // id плейлиста ще немає, сперше його потрыбно заповнити
+				requestPlaylist[id] = channel // id плейлиста ще немає, сперше його потрібно заповнити
 			} else {
 				requestChannel[id] = channel // можемо отримувати дані по id плейлиста
 			}
@@ -332,11 +332,10 @@ func checkChannelVideosByPlayListId(channel *YoutubeChannel) {
 				}
 			}
 
-			// Відео змінило опис
-			newTitle := html.UnescapeString(item.Snippet.Title)
-			if video.Title != newTitle {
+			// Відео змінило опис?
+			if video.Title != item.Snippet.Title {
 				isUpdate = true
-				video.Title = newTitle
+				video.Title = item.Snippet.Title
 			}
 
 			if isUpdate {
@@ -345,7 +344,7 @@ func checkChannelVideosByPlayListId(channel *YoutubeChannel) {
 					Logger.Error(err)
 					continue
 				}
-				Logger.Infof("ch: %v, video: %v, update -> title: %v, duration: %v",
+				Logger.Infof("ch: %v, video: %v, update(title: %v, duration: %v)",
 					channel.Id, videoId, video.Title, video.Duration)
 			}
 
@@ -364,7 +363,7 @@ func checkChannelVideosByPlayListId(channel *YoutubeChannel) {
 func checkChannelVideos(channel *YoutubeChannel) {
 	Logger.Debugf("ch: %v, check video start, count videos: %v", channel.Id, len(channel.Videos))
 
-	// перевіряємо плейлист на застарілs відео яке вже не потрібно обробляти
+	// перевіряємо плейлист на застарілі відео яке вже не потрібно обробляти
 	if len(channel.Videos) > 0 {
 		checkElapsedVideos(channel)
 	}
