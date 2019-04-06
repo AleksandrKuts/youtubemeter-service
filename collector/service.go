@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
-	"html"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
@@ -21,6 +21,7 @@ import (
 
 const LAYOUT_ISO_8601 = "2006-01-02T15:04:05Z"
 const CHANNEL_PART = "snippet,id"
+const PLAYLIST_PART = "snippet,id"
 const VIDEOS_PART = "statistics"
 const VIDEOS_PART_DETAILS = "contentDetails"
 const LIVE_BROADCAST_CONTENT = "live"
@@ -337,7 +338,7 @@ func checkChannelVideos(channel *YoutubeChannel) {
 					Logger.Error(err)
 					continue
 				}
-				Logger.Infof("ch: %v, video: %v, update -> title: %v, duration: %v", 
+				Logger.Infof("ch: %v, video: %v, update -> title: %v, duration: %v",
 					channel.Id, videoId, video.Title, video.Duration)
 			}
 
@@ -536,21 +537,28 @@ func getMetersVideosInd(idch string, requestVideos map[string]*YoutubeVideo) {
 
 	for _, item := range response.Items {
 		videoId := item.Id
-		videoCommentCount := item.Statistics.CommentCount
-		videoLikeCount := item.Statistics.LikeCount
-		videoDislikeCount := item.Statistics.DislikeCount
-		videoViewCount := item.Statistics.ViewCount
-
-		Logger.Debugf("ch: %v, video: %v, comment: %5v, like: %6v, dislike: %6v, view: %8v",
-			idch,
-			videoId,
-			videoCommentCount,
-			videoLikeCount,
-			videoDislikeCount,
-			videoViewCount)
 
 		rVideo, ok := requestVideos[videoId]
 		if ok == true {
+
+			// Відео видалене з каналу тому нема статистиці по ньому, тож припиняємо його обробку
+			if item == nil || item.Statistics == nil {
+				rVideo.Deleted = true;
+				Logger.Infof("ch: %v, video: %v set deleted because statistics is null", idch, videoId)
+				continue
+			}
+			videoCommentCount := item.Statistics.CommentCount
+			videoLikeCount := item.Statistics.LikeCount
+			videoDislikeCount := item.Statistics.DislikeCount
+			videoViewCount := item.Statistics.ViewCount
+
+			Logger.Debugf("ch: %v, video: %v, comment: %5v, like: %6v, dislike: %6v, view: %8v",
+				idch,
+				videoId,
+				videoCommentCount,
+				videoLikeCount,
+				videoDislikeCount,
+				videoViewCount)
 
 			// Заносимо метрики до БД в двох випадках:
 			//   1. якщо пройшов заданий період ( PeriodCount )
