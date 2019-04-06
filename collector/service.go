@@ -22,6 +22,7 @@ import (
 const LAYOUT_ISO_8601 = "2006-01-02T15:04:05Z"
 const CHANNEL_PART = "snippet,id"
 const PLAYLIST_PART = "snippet,id"
+const PLAYLISTITEMS_PART = "snippet"
 const VIDEOS_PART = "statistics"
 const VIDEOS_PART_DETAILS = "contentDetails"
 const LIVE_BROADCAST_CONTENT = "live"
@@ -62,8 +63,13 @@ func StartService(versionMajor, versionMin string) {
 	initChannels()
 
 	checkChannels()
-	checkVideos()
 
+	// Перший прохід заповнюємо дані по плейлистам
+	checkVideos()
+	time.Sleep(10 * time.Second)
+
+	// Другий прохід заповнюємо данні по відео
+	checkVideos()
 	time.Sleep(10 * time.Second)
 
 	getMeters()
@@ -239,33 +245,114 @@ func checkChannels() {
 // Отримати тимчасовий список каналів для роботи з сервісами Youtube. Цей тимчасовий список потрібен щоб не
 // блокувати надовго роботу з основним списком, в якій можуть додати, або видалити канал
 // Плейлисти помічені на видалення ігноруються
-func getRequestChannel() map[string]*YoutubeChannel {
+func getRequestChannel() (map[string]*YoutubeChannel, map[string]*YoutubeChannel) {
 	requestChannel := make(map[string]*YoutubeChannel)
+	requestPlaylist := make(map[string]*YoutubeChannel)
 
 	// блокування потрібно щоб гарантовано не почати обробляти Channel якій видалений, чи деактивований
 	channels.Mux.Lock()
 	defer channels.Mux.Unlock()
 	for id, channel := range channels.Channels {
 		if !channel.Deleted { // додаються тільки робочі плейлисти
-			requestChannel[id] = channel
+			if channel.Idpl == "" {
+				requestPlaylist[id] = channel // id плейлиста ще немає, сперше його потрыбно заповнити
+			} else {
+				requestChannel[id] = channel // можемо отримувати дані по id плейлиста
+			}
 		}
 	}
 
-	return requestChannel
+	return requestChannel, requestPlaylist
 }
 
 // Перевіряємо список відео каналу, чи були додані нові, чи вичерпався термін збору статистики на старих
 func checkVideos() {
 	Logger.Debug("check videos start")
 
-	requestChannel := getRequestChannel() // отримуємо список каналів для запросів
+	requestChannel, requestPlaylist := getRequestChannel() // отримуємо список каналів для запросів
 	Logger.Debugf("request channels: %v", requestChannel)
 
-	for _, channel := range requestChannel {
-		go checkChannelVideos(channel)
+	if len(requestPlaylist) > 0 {
+		go fillPlaylistFromYoutube(requestPlaylist)
+	}
+
+	if len(requestChannel) > 0 {
+		for _, channel := range requestChannel {
+			go checkChannelVideosByPlayListId(channel)
+		}
 	}
 
 	Logger.Debug("check videos end")
+}
+
+
+// Перевіряємо список відео конкретного каналу, чи були додані нові, чи вичерпався термін збору статистики на старих
+// для отримання списку відео викоритовується сервіс https://www.googleapis.com/youtube/v3
+//
+func checkChannelVideosByPlayListId(channel *YoutubeChannel) {
+	Logger.Debugf("ch: %v, check video by PlaylistId start, count videos: %v", channel.Id, len(channel.Videos))
+
+	// перевіряємо плейлист на застарілs відео яке вже не потрібно обробляти
+	if len(channel.Videos) > 0 {
+		checkElapsedVideos(channel)
+	}
+
+	call := service.PlaylistItems.List(PLAYLISTITEMS_PART)
+	call = call.MaxResults(*MaxRequestVideos)
+	call = call.PlaylistId(channel.Idpl)
+	response, err := call.Do()
+	if err != nil {
+		Logger.Errorf("ch: %v, error get playlistitems: %v", channel.Id, err)
+		return
+	}
+
+	// перевіряємо на появу нових відео
+	for _, item := range response.Items {
+		videoId := item.Snippet.ResourceId.VideoId
+		Logger.Debugf("ch: %v, video: %v, is new?", channel.Id, videoId)
+
+		video, ok := channel.Videos[videoId]
+		if ok == false { // такого відео ще нема, пробуємо додати
+			addVideo(channel, videoId, item.Snippet.Title, item.Snippet.Description, 
+				item.Snippet.Description, "")
+		} else {
+			isUpdate := false
+
+			// Чи не потрібно занести дані по тривалості відео (наприклад закінчився стрим і появився його запис)
+			if video.Duration == 0 {
+				videoDetails := getVideoDetails(channel.Id, videoId)
+				if videoDetails != nil {
+					if d, err := duration.Parse(videoDetails.Duration); err == nil {
+						video.Duration = d
+						isUpdate = true
+					} else {
+						Logger.Error("ch: %v, video: %v, error parse duration: %v",
+							channel.Id, videoId, videoDetails.Duration)
+					}
+				}
+			}
+
+			// Відео змінило опис
+			newTitle := html.UnescapeString(item.Snippet.Title)
+			if video.Title != newTitle {
+				isUpdate = true
+				video.Title = newTitle
+			}
+
+			if isUpdate {
+				err = UpdateVideoInDB(videoId, video)
+				if err != nil {
+					Logger.Error(err)
+					continue
+				}
+				Logger.Infof("ch: %v, video: %v, update -> title: %v, duration: %v",
+					channel.Id, videoId, video.Title, video.Duration)
+			}
+
+		}
+	}
+	Logger.Infof("ch: %v, count videos: %v", channel.Id, len(channel.Videos))
+
 }
 
 // Перевіряємо список відео конкретного каналу, чи були додані нові, чи вичерпався термін збору статистики на старих
@@ -277,7 +364,7 @@ func checkVideos() {
 func checkChannelVideos(channel *YoutubeChannel) {
 	Logger.Debugf("ch: %v, check video start, count videos: %v", channel.Id, len(channel.Videos))
 
-	// перевіряємо плейлист на застаріле відео яке вже не потрібно обробляти
+	// перевіряємо плейлист на застарілs відео яке вже не потрібно обробляти
 	if len(channel.Videos) > 0 {
 		checkElapsedVideos(channel)
 	}
@@ -307,7 +394,8 @@ func checkChannelVideos(channel *YoutubeChannel) {
 
 		video, ok := channel.Videos[videoId]
 		if ok == false { // такого відео ще нема, пробуємо додати
-			addVideo(channel, videoId, item.Snippet)
+			addVideo(channel, videoId, item.Snippet.Title, item.Snippet.Description, 
+				item.Snippet.Description, item.Snippet.LiveBroadcastContent)
 		} else {
 			isUpdate := false
 
@@ -394,17 +482,17 @@ func getVideoDetails(channelId, videoId string) *youtube.VideoContentDetails {
 }
 
 // додаємо відео для збору статистики
-func addVideo(channel *YoutubeChannel, videoId string, snippet *youtube.SearchResultSnippet) {
+func addVideo(channel *YoutubeChannel, videoId, title, description, publishedAt, alive string) {
 	channelId := channel.Id
 	if videoId == "" {
 		Logger.Errorf("ch: %v, error: video id is empty", channelId)
 		return
 	}
 
-	title := html.UnescapeString(snippet.Title)
-	publishedAt := snippet.PublishedAt
-	description := snippet.Description
-	alive := snippet.LiveBroadcastContent
+//	title := html.UnescapeString(snippet.Title)
+//	publishedAt := snippet.PublishedAt
+//	description := snippet.Description
+//	alive := snippet.LiveBroadcastContent
 
 	// етап перевірки чи не застаріле відео
 	timePublishedAt, err := time.Parse(LAYOUT_ISO_8601, publishedAt)
@@ -446,7 +534,7 @@ func addVideo(channel *YoutubeChannel, videoId string, snippet *youtube.SearchRe
 func getMeters() {
 	Logger.Debug("check meters start")
 
-	requestChannel := getRequestChannel() // отримуємо список каналів для запросів
+	requestChannel, _ := getRequestChannel() // отримуємо список каналів для запросів
 	Logger.Debugf("check meters, count request channels: %v", len(requestChannel))
 
 	for _, channels := range requestChannel {
@@ -585,4 +673,65 @@ func getMetersVideosInd(idch string, requestVideos map[string]*YoutubeVideo) {
 
 	Logger.Infof("ch: %v, video's metrics - save: %v, skip %v", idch, len(metrics),
 		len(requestVideos)-len(metrics))
+}
+
+// Заповнюємо дані по плейлисту uploads
+func fillPlaylistFromYoutube(channels map[string]*YoutubeChannel) {
+	Logger.Debugf("fill playlist by channel ids")
+
+	// формуемо массив з id каналів вигляду: id,id,id максимальна кількість MaxRequestCountChannelID
+	bIds := bytes.NewBuffer([]byte(""))
+	var isFirst = true
+	mIds := []*bytes.Buffer{}
+	mIds = append(mIds, bIds)
+	count := 0
+	for key, _ := range channels {
+		fmt.Println(key)
+		
+		if count >= *MaxRequestCountChannelID {
+			bIds = bytes.NewBuffer([]byte(""))
+			mIds = append(mIds, bIds)
+
+			count = 0
+			isFirst = true
+		}
+
+		if isFirst {
+			isFirst = false
+		} else {
+			bIds.WriteString(",")
+		}
+		bIds.WriteString(key)
+		
+		count++
+	}
+
+	for i := 0; i < len(mIds); i++ {
+		items := getPlailistIDsFromYoutube(mIds[i].String())
+		for _, item :=  range items {
+			channelId := item.Id
+			channel, ok := channels[channelId]
+			if ok {
+				channel.Idpl = item.ContentDetails.RelatedPlaylists.Uploads 
+				Logger.Infof("ch: %v, set pl: %v", channelId, channel.Idpl)
+			} else {
+				Logger.Errorf("ch: %v, error set pl: %v", channelId, channel.Idpl)				
+			}
+		}
+	}
+}
+
+func getPlailistIDsFromYoutube(ids string) []*youtube.Channel {
+	Logger.Debugf("get playlist by channel ids: %v", ids)
+
+	call := service.Channels.List(PLAYLIST_PART)
+	call = call.Id(ids)
+
+	response, err := call.Do()
+	if err != nil {
+		Logger.Errorf("error get channels.list ids=%v, error=%v", ids, err)
+		return nil
+	}
+
+	return response.Items
 }

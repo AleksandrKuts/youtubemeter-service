@@ -63,6 +63,8 @@ type YoutubeChannel struct {
 	TimeDeleted time.Time
 	
 	Mux sync.Mutex
+	
+	Idpl string
 }
 
 func (channel *YoutubeChannel) Append(id string, video *YoutubeVideo) {
