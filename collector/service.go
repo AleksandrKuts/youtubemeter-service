@@ -20,11 +20,11 @@ import (
 )
 
 const LAYOUT_ISO_8601 = "2006-01-02T15:04:05Z"
-const CHANNEL_PART = "snippet,id"
-const PLAYLIST_PART = "snippet,id"
-const PLAYLISTITEMS_PART = "snippet"
-const VIDEOS_PART = "statistics"
-const VIDEOS_PART_DETAILS = "contentDetails"
+const SEARCH_LIST_PART = "snippet,id"
+const CHANNELS_LIST_PART = "contentDetails,id"
+const PLAYLISTITEMS__LIST_PART = "snippet"
+const VIDEOS_LIST_PART = "statistics"
+const VIDEOS_LIST_PART_DETAILS = "contentDetails"
 const LIVE_BROADCAST_CONTENT = "live"
 
 const missingClientSecretsMessage = `
@@ -297,7 +297,7 @@ func checkChannelVideosByPlayListId(channel *YoutubeChannel) {
 		checkElapsedVideos(channel)
 	}
 
-	call := service.PlaylistItems.List(PLAYLISTITEMS_PART)
+	call := service.PlaylistItems.List(PLAYLISTITEMS__LIST_PART)
 	call = call.MaxResults(*MaxRequestVideos)
 	call = call.PlaylistId(channel.Idpl)
 	response, err := call.Do()
@@ -314,7 +314,7 @@ func checkChannelVideosByPlayListId(channel *YoutubeChannel) {
 		video, ok := channel.Videos[videoId]
 		if ok == false { // такого відео ще нема, пробуємо додати
 			addVideo(channel, videoId, item.Snippet.Title, item.Snippet.Description, 
-				item.Snippet.Description, "")
+				item.Snippet.PublishedAt, "")
 		} else {
 			isUpdate := false
 
@@ -371,7 +371,7 @@ func checkChannelVideos(channel *YoutubeChannel) {
 	// Отримуємо тільки ті відео, в яких ще не вичерпався термін збору метрик
 	t := time.Now().Add(-*PeriodСollection)
 
-	call := service.Search.List(CHANNEL_PART)
+	call := service.Search.List(SEARCH_LIST_PART)
 	call = call.MaxResults(*MaxRequestVideos)
 	call = call.Type("video")
 	call = call.ChannelId(channel.Id)
@@ -464,7 +464,7 @@ func checkElapsedVideos(channel *YoutubeChannel) {
 }
 
 func getVideoDetails(channelId, videoId string) *youtube.VideoContentDetails {
-	call := service.Videos.List(VIDEOS_PART_DETAILS)
+	call := service.Videos.List(VIDEOS_LIST_PART_DETAILS)
 	call = call.Id(videoId)
 
 	response, err := call.Do()
@@ -611,7 +611,7 @@ func getMetersVideosInd(idch string, requestVideos map[string]*YoutubeVideo) {
 	}
 	ids := bIds.String()
 
-	call := service.Videos.List(VIDEOS_PART)
+	call := service.Videos.List(VIDEOS_LIST_PART)
 	call = call.Id(ids)
 
 	response, err := call.Do()
@@ -685,8 +685,6 @@ func fillPlaylistFromYoutube(channels map[string]*YoutubeChannel) {
 	mIds = append(mIds, bIds)
 	count := 0
 	for key, _ := range channels {
-		fmt.Println(key)
-		
 		if count >= *MaxRequestCountChannelID {
 			bIds = bytes.NewBuffer([]byte(""))
 			mIds = append(mIds, bIds)
@@ -708,6 +706,8 @@ func fillPlaylistFromYoutube(channels map[string]*YoutubeChannel) {
 	for i := 0; i < len(mIds); i++ {
 		items := getPlailistIDsFromYoutube(mIds[i].String())
 		for _, item :=  range items {
+			Logger.Debugf("get item %v", item)
+
 			channelId := item.Id
 			channel, ok := channels[channelId]
 			if ok {
@@ -723,7 +723,7 @@ func fillPlaylistFromYoutube(channels map[string]*YoutubeChannel) {
 func getPlailistIDsFromYoutube(ids string) []*youtube.Channel {
 	Logger.Debugf("get playlist by channel ids: %v", ids)
 
-	call := service.Channels.List(PLAYLIST_PART)
+	call := service.Channels.List(CHANNELS_LIST_PART)
 	call = call.Id(ids)
 
 	response, err := call.Do()
