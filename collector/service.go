@@ -246,8 +246,8 @@ func checkChannels() {
 // блокувати надовго роботу з основним списком, в якій можуть додати, або видалити канал
 // Плейлисти помічені на видалення ігноруються
 func getRequestChannel() (map[string]*YoutubeChannel, map[string]*YoutubeChannel) {
-	requestChannel := make(map[string]*YoutubeChannel)
-	requestPlaylist := make(map[string]*YoutubeChannel)
+	requestChannel := make(map[string]*YoutubeChannel) // Канали з плейлистами
+	requestPlaylist := make(map[string]*YoutubeChannel) // Канали без плейлистів (ще не заповнениі з youtube)
 
 	// блокування потрібно щоб гарантовано не почати обробляти Channel якій видалений, чи деактивований
 	channels.Mux.Lock()
@@ -257,7 +257,7 @@ func getRequestChannel() (map[string]*YoutubeChannel, map[string]*YoutubeChannel
 			if channel.Idpl == "" {
 				requestPlaylist[id] = channel // id плейлиста ще немає, сперше його потрібно заповнити
 			} else {
-				requestChannel[id] = channel // можемо отримувати дані по id плейлиста
+				requestChannel[id] = channel //  id плейлиста є, можемо отримувати дані по відео
 			}
 		}
 	}
@@ -272,10 +272,13 @@ func checkVideos() {
 	requestChannel, requestPlaylist := getRequestChannel() // отримуємо список каналів для запросів
 	Logger.Debugf("request channels: %v", requestChannel)
 
+	// Якщо є канали з незаповненими id плейлистів, запрошуємо ці дані з сервісу youtube. Отримувати діні
+	// по відео ми ще не взмозі
 	if len(requestPlaylist) > 0 {
 		go fillPlaylistFromYoutube(requestPlaylist)
 	}
 
+	// Якщо є канали з заповненими id плейлистів, на їх основі запрошуємо дані по відео
 	if len(requestChannel) > 0 {
 		for _, channel := range requestChannel {
 			go checkChannelVideosByPlayListId(channel)
@@ -286,9 +289,9 @@ func checkVideos() {
 }
 
 
-// Перевіряємо список відео конкретного каналу, чи були додані нові, чи вичерпався термін збору статистики на старих
-// для отримання списку відео викоритовується сервіс https://www.googleapis.com/youtube/v3
-//
+// Перевіряємо список відео конкретного каналу, чи були додані нові, чи вичерпався термін збору 
+// статистики на старих. Для отримання списку відео викоритовується сервіс 
+// youtube.playlistitems.list
 func checkChannelVideosByPlayListId(channel *YoutubeChannel) {
 	Logger.Debugf("ch: %v, check video by PlaylistId start, count videos: %v", channel.Id, len(channel.Videos))
 
@@ -453,7 +456,7 @@ func checkElapsedVideos(channel *YoutubeChannel) {
 		} else { // відео ще не призначене для видалення
 			// Перевірка чи не потрібно припинити обробку відео за часом
 			if time.Since(video.PublishedAt) > *PeriodСollection {
-				channel.SetDeletedVideo(id)
+				video.SetDeleted()
 				Logger.Infof("ch: %v, video: %v, set stop processing", channel.Id, id)
 			}
 
@@ -487,11 +490,6 @@ func addVideo(channel *YoutubeChannel, videoId, title, description, publishedAt,
 		Logger.Errorf("ch: %v, error: video id is empty", channelId)
 		return
 	}
-
-//	title := html.UnescapeString(snippet.Title)
-//	publishedAt := snippet.PublishedAt
-//	description := snippet.Description
-//	alive := snippet.LiveBroadcastContent
 
 	// етап перевірки чи не застаріле відео
 	timePublishedAt, err := time.Parse(LAYOUT_ISO_8601, publishedAt)
@@ -568,14 +566,14 @@ func getRequestVideosFromChannel(channel *YoutubeChannel) []map[string]*YoutubeV
 
 	mRequestVideos = append(mRequestVideos, requestVideos)
 
-	// блокування потрібно щоб гарантовано не почати обробляти Channel якій видалений, чи деактивований
+	// блокування потрібно щоб гарантовано не почати обробляти відео які видалені, чи деактивовані
 	channel.Mux.Lock()
 	defer channel.Mux.Unlock()
 
 	count := 0
 	countall := 0
 	for id, video := range channel.Videos {
-		if !video.Deleted { // додаються тільки робочі плейлисти
+		if !video.Deleted { // додаються тільки робочі відео
 			// обробляємо тільки дозволену кількість відео. Запрос ділимо на частини
 			// Робимо нову частину запросу: ще 50 відео
 			if count >= *MaxRequestCountVideoID {
@@ -630,7 +628,7 @@ func getMetersVideosInd(idch string, requestVideos map[string]*YoutubeVideo) {
 
 			// Відео видалене з каналу тому нема статистиці по ньому, тож припиняємо його обробку
 			if item == nil || item.Statistics == nil {
-				rVideo.Deleted = true;
+				rVideo.SetDeleted()
 				Logger.Infof("ch: %v, video: %v set deleted because statistics is null", idch, videoId)
 				continue
 			}
@@ -674,11 +672,31 @@ func getMetersVideosInd(idch string, requestVideos map[string]*YoutubeVideo) {
 		len(requestVideos)-len(metrics))
 }
 
-// Заповнюємо дані по плейлисту uploads
+// Заповнюємо дані по id плейлисту uploads
 func fillPlaylistFromYoutube(channels map[string]*YoutubeChannel) {
 	Logger.Debugf("fill playlist by channel ids")
 
-	// формуемо массив з id каналів вигляду: id,id,id максимальна кількість MaxRequestCountChannelID
+	mIds := getSliceIds(channels)
+
+	for i := 0; i < len(mIds); i++ {
+		items := getPlailistIDsFromYoutube(mIds[i].String())
+		for _, item :=  range items {
+			Logger.Debugf("get item %v", item)
+
+			channelId := item.Id
+			channel, ok := channels[channelId]
+			if ok {
+				channel.Idpl = item.ContentDetails.RelatedPlaylists.Uploads 
+				Logger.Infof("ch: %v, set pl: %v", channelId, channel.Idpl)
+			} else {
+				Logger.Errorf("ch: %v, error set pl: %v", channelId, channel.Idpl)				
+			}
+		}
+	}
+}
+
+// формуємо массив з id каналів вигляду: id,id,id максимальна кількість MaxRequestCountChannelID
+func getSliceIds(channels map[string]*YoutubeChannel) []*bytes.Buffer {
 	bIds := bytes.NewBuffer([]byte(""))
 	var isFirst = true
 	mIds := []*bytes.Buffer{}
@@ -702,22 +720,8 @@ func fillPlaylistFromYoutube(channels map[string]*YoutubeChannel) {
 		
 		count++
 	}
-
-	for i := 0; i < len(mIds); i++ {
-		items := getPlailistIDsFromYoutube(mIds[i].String())
-		for _, item :=  range items {
-			Logger.Debugf("get item %v", item)
-
-			channelId := item.Id
-			channel, ok := channels[channelId]
-			if ok {
-				channel.Idpl = item.ContentDetails.RelatedPlaylists.Uploads 
-				Logger.Infof("ch: %v, set pl: %v", channelId, channel.Idpl)
-			} else {
-				Logger.Errorf("ch: %v, error set pl: %v", channelId, channel.Idpl)				
-			}
-		}
-	}
+	
+	return mIds	
 }
 
 func getPlailistIDsFromYoutube(ids string) []*youtube.Channel {
