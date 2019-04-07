@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/AleksandrKuts/youtubemeter-service/backend"
 )
-const versionMajor = "2.0"
+const versionMajor = "2.1"
 
 var (
 	version string

@@ -25,15 +25,15 @@ const GET_METRICS_BY_IDVIDEO_BETWEEN_DATE = "Select * FROM return_metrics($1, $2
 
 const GET_VIDEO_BY_ID = "SELECT * FROM return_video($1)"
 
-const GET_VIDEOS= "SELECT v.id, TRIM(v.title), v.publishedat, TRIM(ch.title) as ptitle, v.duration, v.idch FROM video v" +
+const GET_VIDEOS = "SELECT v.id, TRIM(v.title), v.publishedat, TRIM(ch.title) as ptitle, v.duration, v.idch FROM video v" +
 	" LEFT JOIN channel ch ON ch.id = v.idch" +
 	" WHERE ch.enable = true ORDER BY publishedat DESC LIMIT $1 OFFSET $2"
-	
-const GET_VIDEOS_BY_ID_CHANNEL = "SELECT id, TRIM(title), publishedat, '' ptitle, v.duration, v.idch FROM video v" + 
+
+const GET_VIDEOS_BY_ID_CHANNEL = "SELECT id, TRIM(title), publishedat, '' ptitle, v.duration, v.idch FROM video v" +
 	" WHERE idch = $1 " +
 	" ORDER BY publishedat DESC LIMIT $2 OFFSET $3"
-	
-const GET_GLOBAL_COUNTS = "select count(*) as count, SUM(countvideo) as countvideo FROM channel WHERE enable = TRUE"	
+
+const GET_GLOBAL_COUNTS = "select count(*) as count, SUM(countvideo) as countvideo FROM channel WHERE enable = TRUE"
 
 const NO_DATA = "No data"
 
@@ -148,18 +148,18 @@ func getChannelsFromDB(onlyEnable bool) ([]Channel, error) {
 	var err error
 
 	if onlyEnable {
-		rows, err = db.Query(GET_CHANNELS_ENABLE)		
+		rows, err = db.Query(GET_CHANNELS_ENABLE)
 	} else {
-		rows, err = db.Query(GET_CHANNELS)		
+		rows, err = db.Query(GET_CHANNELS)
 	}
-	
+
 	if err != nil {
 		Logger.Errorf("Error get channels: %v", err)
 		return nil, err
 	}
 
 	if rows == nil {
-		return nil, errors.New( NO_DATA )
+		return nil, errors.New(NO_DATA)
 	}
 
 	defer rows.Close()
@@ -222,11 +222,11 @@ func getMetricsByIdFromDB(id string, from, to string) ([]*Metrics, error) {
 	}
 
 	if rows == nil {
-		return nil, errors.New( NO_DATA )
+		return nil, errors.New(NO_DATA)
 	}
 
 	defer rows.Close()
-	
+
 	response := []*Metrics{}
 
 	for rows.Next() {
@@ -250,7 +250,7 @@ func getMetricsByIdFromDB(id string, from, to string) ([]*Metrics, error) {
 }
 
 // Отримати опис відео по його id
-func getVideoByIdFromDB(id string) ( *YoutubeVideo, error) {
+func getVideoByIdFromDB(id string) (*YoutubeVideo, error) {
 	if id == "" {
 		return nil, errors.New("video id is null")
 	}
@@ -265,18 +265,20 @@ func getVideoByIdFromDB(id string) ( *YoutubeVideo, error) {
 	var min_timemetric time.Time
 	var duration time.Duration
 
-	err := db.QueryRow(GET_VIDEO_BY_ID, id).Scan(&title, &description, &idch, &chtitle, &publishedat, 
-				&count_metrics, &min_timemetric, &max_timemetric, &duration )
+	err := db.QueryRow(GET_VIDEO_BY_ID, id).Scan(&title, &description, &idch, &chtitle, &publishedat,
+		&count_metrics, &min_timemetric, &max_timemetric, &duration)
 	if err != nil {
 		Logger.Errorf("Error get videos by id: %v", err)
 		return nil, err
 	}
-	
-	youtubeVideo := &YoutubeVideo{strings.TrimSpace(title), strings.TrimSpace(description), strings.TrimSpace(idch), 
-			strings.TrimSpace(chtitle), publishedat, count_metrics, max_timemetric, min_timemetric, duration}
-	
-	Logger.Debugf("id: %v, title: %v, description: %v, idch: %v, chtitle: %v, publishedat: %v, count_metrics: %v, max_timemetric: %v, min_timemetric: %v, duration: %v", 
-			id, title, description, idch, chtitle, publishedat, count_metrics, max_timemetric, min_timemetric, duration)
+
+	youtubeVideo := &YoutubeVideo{Title: strings.TrimSpace(title), Description: strings.TrimSpace(description),
+		ChannelId: strings.TrimSpace(idch), ChannelTitle: strings.TrimSpace(chtitle),
+		PublishedAt: publishedat, CountMetrics: count_metrics, MinTimeMetric: min_timemetric,
+		MaxTimeMetric: max_timemetric, Duration: duration}
+
+	Logger.Debugf("id: %v, title: %v, description: %v, idch: %v, chtitle: %v, publishedat: %v, count_metrics: %v, min_timemetric: %v, max_timemetric: %v, duration: %v",
+		id, title, description, idch, chtitle, publishedat, count_metrics, min_timemetric, max_timemetric, duration)
 
 	return youtubeVideo, nil
 }
@@ -300,7 +302,7 @@ func getVideosByChannelIdFromDB(id string, offset int) ([]byte, error) {
 	}
 
 	if rows == nil {
-		return nil, errors.New( NO_DATA )
+		return nil, errors.New(NO_DATA)
 	}
 
 	defer rows.Close()
@@ -339,7 +341,7 @@ func getVideosByChannelIdFromDB(id string, offset int) ([]byte, error) {
 }
 
 // Отримати опис відео по його id
-func getGlobalCountsFromDB(version string) ( *GlobalCounts, error) {
+func getGlobalCountsFromDB(version string) (*GlobalCounts, error) {
 	var countChannels int = 0
 	var countVideos int = 0
 
@@ -347,17 +349,15 @@ func getGlobalCountsFromDB(version string) ( *GlobalCounts, error) {
 	if err != nil {
 		Logger.Errorf("Error get global counts from DB: %v", err)
 	}
-	
-	globalCounts := &GlobalCounts{CountChannels: countChannels, CountVideos: countVideos, TimeUpdate: time.Now(), 
+
+	globalCounts := &GlobalCounts{CountChannels: countChannels, CountVideos: countVideos, TimeUpdate: time.Now(),
 		MaxVideoCount: *MaxViewVideosInChannel, PeriodVideoCache: *PeriodVideoCache / 1000000,
 		Version: version, ListenAdmin: *ListenAdmin}
-	
+
 	Logger.Debugf("countChannels: %v, countVideos: %v", countChannels, countVideos)
 
 	return globalCounts, nil
 }
-
-
 
 // Перевірка дати, заданої рядком мілісекунд, та її форматування
 // якщо дата не задана (пустий рядок), повертаємо пустий рядок
