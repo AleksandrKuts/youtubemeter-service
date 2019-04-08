@@ -84,7 +84,7 @@ func StartService(versionMajor, versionMin string) {
 
 	// Другий прохід заповнюємо данні по відео
 	// використовуємо youtube.seach
-//	countRequestPlaylistItems = *CountRequestPlaylistItems
+	//	countRequestPlaylistItems = *CountRequestPlaylistItems
 	Logger.Info("Second check videos")
 	checkVideos()
 	time.Sleep(10 * time.Second)
@@ -106,15 +106,12 @@ func StartService(versionMajor, versionMin string) {
 
 	for {
 		select {
-		case <-timerChannel:
-			Logger.Warn("timerChannel")
-			//			go checkChannels()
-		case <-timerVideo:
-			Logger.Warn("timerVideo")
-			//			go checkVideos()
-		case <-timerMeter:
-			Logger.Warn("timerMeter")
-			//			go getMeters()
+		case <-timerChannel: // старт перевірки списку робочих каналів
+			go checkChannels()
+		case <-timerVideo: // старт перевірки списку відео в каналі
+			go checkVideos()
+		case <-timerMeter: // старт перевірки метрик відео 
+			go getMeters()
 		case s := <-quit:
 			switch s {
 
@@ -133,7 +130,7 @@ func StartService(versionMajor, versionMin string) {
 				return
 
 			default:
-				Logger.Info("Unknown signal.")
+				Logger.Warn("Unknown signal.")
 			}
 		default:
 			time.Sleep(50 * time.Millisecond)
@@ -142,12 +139,14 @@ func StartService(versionMajor, versionMin string) {
 
 }
 
+// Виводить в файл поточний стан роботи сервісу з повним списком каналів, та відео по ним
 func printStatus() {
 	Logger.Infof("print status to %v", *FileStatus)
 
 	timeFormatFull := "2006-01-02 15:04:05"
 	timeFormatTime := "15:04:05"
 
+	// Файл або створюємо, або відкриваємо для дозапису в нього
 	f, err := os.OpenFile(*FileStatus, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
 	if err != nil {
 		fmt.Println(err)
@@ -312,7 +311,7 @@ func checkChannels() {
 
 	Logger.Debugf("ids from db: %v", ids)
 
-	if ids != nil && len(ids) > 0 {
+	if ids != nil && len(ids) > 0 { // обробляємо якщо є що обробляти
 
 		channels.Mux.Lock()
 		defer channels.Mux.Unlock()
@@ -375,15 +374,15 @@ func getRequestChannel() (map[string]*YoutubeChannel, map[string]*YoutubeChannel
 	return requestChannel, requestPlaylist
 }
 
-// Перевіряємо список відео каналу, чи були додані нові, чи вичерпався термін збору статистики на старих
+// Перевіряємо списки відео каналів, чи були додані нові, чи вичерпався термін збору статистики на старих
 func checkVideos() {
 	Logger.Debug("check videos start")
 
-	requestChannel, requestPlaylist := getRequestChannel() // отримуємо список каналів для запросів
+	requestChannel, requestPlaylist := getRequestChannel() // отримуємо список активних каналів 
 	Logger.Debugf("request channels: %v", requestChannel)
 
-	// Якщо є канали з незаповненими id плейлистів, запрошуємо ці дані з сервісу youtube. Отримувати діні
-	// по відео ми ще не взмозі
+	// Якщо є канали з незаповненими id плейлистів, запрошуємо ці дані з сервісу youtube. Отримувати дані
+	// по відео ми ще не взмозі, потрібен id плейлиста
 	if len(requestPlaylist) > 0 {
 		go fillPlaylistFromYoutube(requestPlaylist)
 	}
@@ -391,17 +390,17 @@ func checkVideos() {
 	// Якщо є канали з заповненими id плейлистів, на їх основі запрошуємо дані по відео
 	if len(requestChannel) > 0 {
 
-		if countRequestPlaylistItems >= *CountRequestPlaylistItems {
+		// Дані по відео запрошуються по черзі або з сервісу youtube.playlistitems, або з сервісу youtube.seach
+		// Чому так зроблено дивись опис countRequestPlaylistItems в collector.ini
+		if countRequestPlaylistItems >= *CountRequestPlaylistItems { // Запрос відео через youtube.seach
 			Logger.Info("from service youtube.seach")
 			countRequestPlaylistItems = 0
-			for _, channel := range requestChannel {
-				// Запрос відео через youtube.seach.list
+			for _, channel := range requestChannel {				
 				go getVideosFromYoutubeSearch(channel)
 			}
-		} else {
+		} else { // Запрос відео через youtube.playlistitems
 			Logger.Info("from service youtube.playlistitems")
-			for _, channel := range requestChannel {
-				// Запрос відео через youtube.playlistitems.list
+			for _, channel := range requestChannel {				
 				go getVideosFromYoutubePlaylistItems(channel)
 			}
 			countRequestPlaylistItems++
@@ -413,15 +412,16 @@ func checkVideos() {
 
 // Перевіряємо список відео конкретного каналу, чи були додані нові, чи вичерпався термін збору
 // статистики на старих. Для отримання списку відео викоритовується сервіс
-// youtube.playlistitems.list
+// youtube.playlistitems.list - вартість запиту 2
 func getVideosFromYoutubePlaylistItems(channel *YoutubeChannel) {
 	Logger.Debugf("ch: %v, request from youtube.playlistitems, count videos: %v", channel.Id, len(channel.Videos))
 
-	// перевіряємо плейлист на застарілs відео яке вже не потрібно обробляти
+	// перевіряємо плейлист на застарілі відео яке вже не потрібно обробляти
 	if len(channel.Videos) > 0 {
 		checkElapsedVideos(channel)
 	}
 
+	// Виклик запиту сервіса, опис: https://developers.google.com/youtube/v3/docs/playlistItems/list
 	call := service.PlaylistItems.List(PLAYLISTITEMS__LIST_PART)
 	call = call.MaxResults(*MaxRequestVideos)
 	call = call.PlaylistId(channel.Idpl)
@@ -440,7 +440,7 @@ func getVideosFromYoutubePlaylistItems(channel *YoutubeChannel) {
 		if ok == false { // такого відео ще нема, пробуємо додати
 			addVideo(channel, videoId, item.Snippet.Title, item.Snippet.Description,
 				item.Snippet.PublishedAt, "")
-		} else { // перевіримо відео на зміни даних
+		} else { // перевіримо відео на зміни даних (часто змінюють назву)
 			checkUpdateVideo(channel.Id, videoId, item.Snippet.Title, "", video)
 		}
 	}
@@ -448,12 +448,9 @@ func getVideosFromYoutubePlaylistItems(channel *YoutubeChannel) {
 
 }
 
-// Перевіряємо список відео конкретного каналу, чи були додані нові, чи вичерпався термін збору статистики на старих
-// для отримання списку відео викоритовується сервіс https://www.googleapis.com/youtube/v3
-//
-// https://www.googleapis.com/youtube/v3/search?part=snippet%2Cid&channelId=UCRzL8jf39oEWyrPnjmhBa2w&maxResults=25
-// &order=date&publishedAfter=2019-01-30T19%3A08%3A26.000Z&type=video&key={YOUR_API_KEY}
-//
+// Перевіряємо список відео конкретного каналу, чи були додані нові, чи вичерпався термін збору
+// статистики на старих. Для отримання списку відео викоритовується сервіс
+// youtube.search.list - вартість запиту 100
 func getVideosFromYoutubeSearch(channel *YoutubeChannel) {
 	Logger.Debugf("ch: %v, request from youtube.search, count videos: %v", channel.Id, len(channel.Videos))
 
@@ -465,6 +462,7 @@ func getVideosFromYoutubeSearch(channel *YoutubeChannel) {
 	// Отримуємо тільки ті відео, в яких ще не вичерпався термін збору метрик
 	t := time.Now().Add(-*PeriodСollection)
 
+	// Виклик запиту сервіса, опис: https://developers.google.com/youtube/v3/docs/search/list
 	call := service.Search.List(SEARCH_LIST_PART)
 	call = call.MaxResults(*MaxRequestVideos)
 	call = call.Type("video")
@@ -489,7 +487,7 @@ func getVideosFromYoutubeSearch(channel *YoutubeChannel) {
 		if ok == false { // такого відео ще нема, пробуємо додати
 			addVideo(channel, videoId, item.Snippet.Title, item.Snippet.Description,
 				item.Snippet.PublishedAt, item.Snippet.LiveBroadcastContent)
-		} else { // перевіримо відео на зміни даних
+		} else { // перевіримо відео на зміни даних (часто змінюють назву)
 			checkUpdateVideo(channel.Id, videoId, html.UnescapeString(item.Snippet.Title),
 				item.Snippet.LiveBroadcastContent, video)
 		}
@@ -497,7 +495,7 @@ func getVideosFromYoutubeSearch(channel *YoutubeChannel) {
 	Logger.Debugf("ch: %v, count videos: %v", channel.Id, len(channel.Videos))
 }
 
-// Перевірити деталі відео, та при необхідності виправити
+// Перевірити деталі відео, та при необхідності виправляємо
 func checkUpdateVideo(chId, videoId, title, alive string, video *YoutubeVideo) {
 	isUpdate := false
 
@@ -521,6 +519,7 @@ func checkUpdateVideo(chId, videoId, title, alive string, video *YoutubeVideo) {
 		isUpdate = true
 	}
 
+	// Якщо щось змінилось зберігаємо зміни в БД
 	if isUpdate {
 		err := UpdateVideoInDB(videoId, video)
 		if err != nil {
@@ -564,6 +563,7 @@ func checkElapsedVideos(channel *YoutubeChannel) {
 
 // Отримати детальні дані по відео
 func getVideoDetails(channelId, videoId string) *youtube.VideoContentDetails {
+	// Виклик запиту сервіса, опис: https://developers.google.com/youtube/v3/docs/videos/list
 	call := service.Videos.List(VIDEOS_LIST_PART_DETAILS)
 	call = call.Id(videoId)
 
@@ -602,7 +602,7 @@ func addVideo(channel *YoutubeChannel, videoId, title, description, publishedAt,
 
 	var videoDuration time.Duration
 
-	// Якщо це не пряма трансляція отримуємо тривалість відео
+	// Якщо це не трансляція наживо отримуємо тривалість відео
 	if alive != LIVE_BROADCAST_CONTENT {
 		videoDetails := getVideoDetails(channelId, videoId)
 		if videoDetails != nil {
@@ -613,6 +613,7 @@ func addVideo(channel *YoutubeChannel, videoId, title, description, publishedAt,
 	}
 
 	// відео пройшло перевірку, додаємо його для збору статистики
+	// додаємо відео в БД
 	err = AddVideoToDB(videoId, channelId, timePublishedAt, title, description, videoDuration)
 	if err != nil {
 		Logger.Error(err)
@@ -621,30 +622,36 @@ func addVideo(channel *YoutubeChannel, videoId, title, description, publishedAt,
 
 	channel.Mux.Lock()
 	defer channel.Mux.Unlock()
+
+	// додаємо відео в поточний канал 
 	channel.Append(videoId, &YoutubeVideo{PublishedAt: timePublishedAt, Title: title, Deleted: false})
 	Logger.Infof("ch: %v, video: %v, add new at: %v, title: %v, stream: %v", channelId, videoId, timePublishedAt, title, alive)
 }
 
+// Отримуємо метрики відео всіх активних каналів
 func getMeters() {
 	Logger.Debug("check meters start")
 
 	requestChannel, _ := getRequestChannel() // отримуємо список каналів для запросів
 	Logger.Debugf("check meters, count request channels: %v", len(requestChannel))
 
-	for _, channels := range requestChannel {
-		go getMetersVideos(channels)
+	for _, channel := range requestChannel {
+		go getMetersVideos(channel)
 	}
 	Logger.Debug("check meters end")
 }
 
-func getMetersVideos(channels *YoutubeChannel) {
-	if len(channels.Videos) > 0 {
-		mRrequestVideos := getRequestVideosFromChannel(channels)
+// Отримуємо метрики відео для одного каналу
+func getMetersVideos(channel *YoutubeChannel) {
+	if len(channel.Videos) > 0 {
+		// Ділемо запити по відео порціями максимум по MaxRequestCountVideoID штук
+		mRrequestVideos := getRequestVideosFromChannel(channel)
+		// Запрошуємо діни по відео порціями максимум по MaxRequestCountVideoID штук
 		for i := 0; i < len(mRrequestVideos); i++ {
-			getMetersVideosInd(channels.Id, mRrequestVideos[i])
+			getMetricsFromYoutubeVideo(channel.Id, mRrequestVideos[i])
 		}
 	} else {
-		Logger.Infof("ch: %v, skip - count videos 0", channels.Id)
+		Logger.Infof("ch: %v, skip - count videos 0", channel.Id)
 		return
 	}
 }
@@ -690,10 +697,11 @@ func getRequestVideosFromChannel(channel *YoutubeChannel) []map[string]*YoutubeV
 	return mRequestVideos
 }
 
-func getMetersVideosInd(idch string, requestVideos map[string]*YoutubeVideo) {
+// Отримати метрики відео з сервісу youtube.videos.list - вартість запиту 2
+func getMetricsFromYoutubeVideo(idch string, requestVideos map[string]*YoutubeVideo) {
 	Logger.Debugf("ch: %v, getMetersVideo, count request videos: %v", idch, len(requestVideos))
 
-	// Формуємо стрічку з id подилену комами
+	// Формуємо стрічку з id подилену комами: id1,id2,id3...
 	var bIds bytes.Buffer
 	var isFirst = true
 	for id, _ := range requestVideos {
@@ -706,6 +714,7 @@ func getMetersVideosInd(idch string, requestVideos map[string]*YoutubeVideo) {
 	}
 	ids := bIds.String()
 
+	// Виклик запиту сервіса, опис: https://developers.google.com/youtube/v3/docs/videos/list
 	call := service.Videos.List(VIDEOS_LIST_PART)
 	call = call.Id(ids)
 
@@ -761,6 +770,7 @@ func getMetersVideosInd(idch string, requestVideos map[string]*YoutubeVideo) {
 		}
 	}
 
+	// Додаємо метрики в БД
 	if len(metrics) > 0 {
 		AddMetricToDB(metrics)
 	}
@@ -769,12 +779,14 @@ func getMetersVideosInd(idch string, requestVideos map[string]*YoutubeVideo) {
 		len(requestVideos)-len(metrics))
 }
 
-// Заповнюємо дані по id плейлисту uploads
+// Заповнюємо дані каналів по їх плейлисту uploads
 func fillPlaylistFromYoutube(channels map[string]*YoutubeChannel) {
 	Logger.Debugf("fill playlist by channel ids")
 
+	// отримуємо массив з id каналів вигляду: id,id,id максимальна кількість MaxRequestCountChannelID
 	mIds := getSliceIds(channels)
 
+	// Запрошуємо діни по плейлистам порціями максимум по MaxRequestCountChannelID id-каналів в запросі
 	for i := 0; i < len(mIds); i++ {
 		items := getPlailistIDsFromYoutube(mIds[i].String())
 		for _, item := range items {
@@ -800,6 +812,8 @@ func getSliceIds(channels map[string]*YoutubeChannel) []*bytes.Buffer {
 	mIds = append(mIds, bIds)
 	count := 0
 	for key, _ := range channels {
+		// обробляємо тільки дозволену кількість id-кінілів. Запрос ділимо на частини
+		// Робимо нову частину запросу: ще MaxRequestCountChannelID id-каналів
 		if count >= *MaxRequestCountChannelID {
 			bIds = bytes.NewBuffer([]byte(""))
 			mIds = append(mIds, bIds)
@@ -821,9 +835,11 @@ func getSliceIds(channels map[string]*YoutubeChannel) []*bytes.Buffer {
 	return mIds
 }
 
+// Отримати плейлисти по id-каналів з сервісу youtube.channels.list - вартість запиту 2
 func getPlailistIDsFromYoutube(ids string) []*youtube.Channel {
 	Logger.Debugf("get playlist by channel ids: %v", ids)
 
+	// Виклик запиту сервіса, опис: https://developers.google.com/youtube/v3/docs/channels/list
 	call := service.Channels.List(CHANNELS_LIST_PART)
 	call = call.Id(ids)
 
