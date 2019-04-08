@@ -15,6 +15,7 @@ var (
 	Log = flag.String("Log", "collector.log", "")
 	LogError = flag.String("LogError", "collector_error.log", "")
 	LogTimeFormat = flag.String("LogTimeFormat", "02-01-2006 15:04:05", "")
+	FileStatus = flag.String("fileStatus", "status.txt", "")
 
 	FileSecret = flag.String("fileToken", "client_secret.json", "")
 	CredentialFile = flag.String("fileCredential", "yotubemetric_credential.json", "")
@@ -31,6 +32,7 @@ var (
 	MaxRequestVideos = flag.Int64("maxRequestVideos", 20, "")
 	MaxRequestCountChannelID = flag.Int("maxRequestCountChannelID", 50, "")
 	MaxRequestCountVideoID = flag.Int("maxRequestCountVideoID", 50, "")
+	CountRequestPlaylistItems = flag.Int("countRequestPlaylistItems", 1000, "")
 	
 	DBHost = flag.String("dbhost", "localhost", "")
 	DBPort = flag.String("dbport", "5432", "")
@@ -105,6 +107,7 @@ func init() {
 	Logger.Debugf("Log: %v", *Log)
 	Logger.Debugf("LogError: %v", *LogError)
 	Logger.Debugf("LogTimeFormat: %v", *LogTimeFormat)
+	Logger.Debugf("fileStatus: %v", *FileStatus)
 
 	Logger.Debugf("fileSecret: %v", *FileSecret)
 	Logger.Debugf("timeout: %v", *Timeout)
@@ -119,6 +122,7 @@ func init() {
 	Logger.Debugf("MaxRequestVideos: %v", *MaxRequestVideos)
 	Logger.Debugf("MaxReqestCountChannelID: %v", *MaxRequestCountChannelID)
 	Logger.Debugf("MaxReqestCountVideoID: %v", *MaxRequestCountVideoID)
+	Logger.Debugf("CountRequestPlaylistItems: %v", *CountRequestPlaylistItems)
 
 	Logger.Debugf("dbhost=%s", *DBHost)
 	Logger.Debugf("dbport=%s", *DBPort)

@@ -77,13 +77,6 @@ func (channel *YoutubeChannel) Append(id string, video *YoutubeVideo) {
 	channel.Videos[id] = video	
 }
 
-//// mark video as deleted from meter ( not in database )
-//func (channel *YoutubeChannel) SetDeletedVideo(id string) {
-//	channel.Videos[id].SetDeleted()
-////	channel.Videos[id].Deleted = true  	
-////	channel.Videos[id].TimeDeleted = time.Now()
-//}
-
 func (channel *YoutubeChannel) Delete(id string) {
 	delete(channel.Videos, id)	
 }

@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
+	"syscall"
 	"time"
 
 	"golang.org/x/net/context"
@@ -19,13 +21,15 @@ import (
 	"github.com/peterhellberg/duration"
 )
 
-const LAYOUT_ISO_8601 = "2006-01-02T15:04:05Z"
+// Details on: https://developers.google.com/youtube/v3/docs/
 const SEARCH_LIST_PART = "snippet,id"
 const CHANNELS_LIST_PART = "contentDetails,id"
 const PLAYLISTITEMS__LIST_PART = "snippet"
 const VIDEOS_LIST_PART = "statistics"
 const VIDEOS_LIST_PART_DETAILS = "contentDetails"
 const LIVE_BROADCAST_CONTENT = "live"
+
+const LAYOUT_ISO_8601 = "2006-01-02T15:04:05Z"
 
 const missingClientSecretsMessage = `
 Please configure OAuth 2.0
@@ -35,6 +39,10 @@ Please configure OAuth 2.0
 var channels YoutubeChannels
 
 var service *youtube.Service
+
+// Поточна кількість запитів до сервісу youtube.playlistItems. Детальніше дивись опис countRequestPlaylistItems
+// в collector.ini
+var countRequestPlaylistItems int
 
 func init() {
 	ctx := context.Background()
@@ -60,44 +68,146 @@ func init() {
 func StartService(versionMajor, versionMin string) {
 	Logger.Warnf("server start, version: %s.%s", versionMajor, versionMin)
 
+	// Налагоджеэмо вихід з програми
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+
 	initChannels()
 
-	checkChannels()
-
 	// Перший прохід заповнюємо дані по плейлистам
+	Logger.Info("First check videos")
 	checkVideos()
 	time.Sleep(10 * time.Second)
 
 	// Другий прохід заповнюємо данні по відео
+	// використовуємо youtube.seach
+//	countRequestPlaylistItems = *CountRequestPlaylistItems
+	Logger.Info("Second check videos")
 	checkVideos()
 	time.Sleep(10 * time.Second)
 
+	Logger.Info("First check meters")
 	getMeters()
+	time.Sleep(10 * time.Second)
 
+	// Таймер для періодичної перевірки списку каналів
 	timerChannel := time.Tick(*PeriodChannel)
+	// Таймер для періодичної перевірки списку відео в каналі
 	timerVideo := time.Tick(*PeriodVideo)
 
+	// Зрушення за часом запитів метрик щодо запитів списку відео
 	time.Sleep(*ShiftPeriodMetric)
-	timerMeter := time.Tick(*PeriodMeter)
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
+	// Таймер для періодичної перевірки метрик відео
+	timerMeter := time.Tick(*PeriodMeter)
 
 	for {
 		select {
 		case <-timerChannel:
-			go checkChannels()
+			Logger.Warn("timerChannel")
+			//			go checkChannels()
 		case <-timerVideo:
-			go checkVideos()
+			Logger.Warn("timerVideo")
+			//			go checkVideos()
 		case <-timerMeter:
-			go getMeters()
-		case <-quit:
-			Logger.Warn("Service shutting down")
-			return
+			Logger.Warn("timerMeter")
+			//			go getMeters()
+		case s := <-quit:
+			switch s {
+
+			// kill -SIGQUIT XXXX
+			// ps aux | grep -i cmd | grep -v grep | awk {'print $2'} | xargs kill -3
+			case syscall.SIGQUIT:
+				printStatus()
+
+			// kill -SIGINT XXXX or Ctrl+c
+			// ps aux | grep -i cmd | grep -v grep | awk {'print $2'} | xargs kill -2
+			case syscall.SIGINT, syscall.SIGTERM:
+				Logger.Info("Server shutdown, wait 5 seconds")
+				time.Sleep(5 * time.Second)
+				closeDB()
+				Logger.Info("Server shutdown")
+				return
+
+			default:
+				Logger.Info("Unknown signal.")
+			}
 		default:
 			time.Sleep(50 * time.Millisecond)
 		}
 	}
+
+}
+
+func printStatus() {
+	Logger.Infof("print status to %v", *FileStatus)
+
+	timeFormatFull := "2006-01-02 15:04:05"
+	timeFormatTime := "15:04:05"
+
+	f, err := os.OpenFile(*FileStatus, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer f.Close()
+
+	fmt.Fprintf(f, "status on date: %v\n", time.Now().Format(timeFormatFull))
+
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	fmt.Fprintln(f, "Memory statistics:")
+	fmt.Fprintf(f, "Alloc: \t\t%v\n", m.Alloc)
+	fmt.Fprintf(f, "Total: \t\t%v\nAlloc", m.TotalAlloc)
+	fmt.Fprintf(f, "Sys: \t%v\n", m.Sys)
+	fmt.Fprintf(f, "Lookups: \t%v\n", m.Lookups)
+	fmt.Fprintf(f, "Mallocs: \t%v\n", m.Mallocs)
+	fmt.Fprintf(f, "Frees: \t\t%v\n", m.Frees)
+	fmt.Fprintf(f, "HeapAlloc: \t%v\n", m.HeapAlloc)
+	fmt.Fprintf(f, "HeapSys: \t%v\n", m.HeapSys)
+	fmt.Fprintf(f, "HeapIdle: \t%v\n", m.HeapIdle)
+	fmt.Fprintf(f, "HeapInuse: \t%v\n", m.HeapInuse)
+	fmt.Fprintf(f, "HeapReleased: \t%v\n", m.HeapReleased)
+	fmt.Fprintf(f, "HeapObjects: \t%v\n", m.HeapObjects)
+	fmt.Fprintf(f, "StackInuse: \t%v\n", m.StackInuse)
+	fmt.Fprintf(f, "StackSys: \t%v\n", m.StackSys)
+	fmt.Fprintf(f, "MSpanInuse: \t%v\n", m.MSpanInuse)
+	fmt.Fprintf(f, "MSpanSys: \t%v\n", m.MSpanSys)
+	fmt.Fprintf(f, "MCacheInuse: \t%v\n", m.MCacheInuse)
+	fmt.Fprintf(f, "MCacheSys: \t%v\n", m.MCacheSys)
+	fmt.Fprintf(f, "BuckHashSys: \t%v\n", m.BuckHashSys)
+	fmt.Fprintf(f, "GCSys: \t\t%v\n", m.GCSys)
+	fmt.Fprintf(f, "OtherSys: \t%v\n", m.OtherSys)
+	fmt.Fprintf(f, "NextGC: \t%v\n", m.NextGC)
+	fmt.Fprintf(f, "LastGC: \t%v\n", m.LastGC)
+	fmt.Fprintf(f, "PauseTotalNs: \t%v\n", m.PauseTotalNs)
+	fmt.Fprintf(f, "NumGC: \t%v\n", m.NumGC)
+	fmt.Fprintf(f, "NumForcedGC: \t%v\n", m.NumForcedGC)
+	fmt.Fprintf(f, "GCCPUFraction: \t%v\n", m.GCCPUFraction)
+	fmt.Fprintf(f, "EnableGC: \t%v\n", m.EnableGC)
+	fmt.Fprintf(f, "DebugGC: \t%v\n", m.DebugGC)
+
+	fmt.Fprintln(f, "\nDatabase statistics:")
+	fmt.Fprintf(f, "database open connections: %v \n", db.Stats().OpenConnections)
+
+	fmt.Fprintln(f, "\nChannel statistics:")
+	for _, ch := range channels.Channels {
+		fmt.Fprintf(f, "ch: %v, pl: %v, del: %v, timeDel: %v\n", ch.Id, ch.Idpl, ch.Deleted, ch.TimeDeleted.Format(timeFormatFull))
+
+		for id, video := range ch.Videos {
+			fmt.Fprintf(f, "  id: %v, at: %v, dur:%10v, like:%8v, dislike:%8v, comment:%8v, view:%8v, tcount: %v, del:%6v, tdel: %v, title: %v\n",
+				id, video.PublishedAt.Format(timeFormatFull), video.Duration,
+				video.LikeCount, video.DislikeCount, video.CommentCount, video.ViewCount,
+				video.TimeCount.Format(timeFormatTime), video.Deleted, video.TimeDeleted.Format(timeFormatTime),
+				video.Title)
+		}
+		fmt.Fprintln(f, "")
+	}
+	fmt.Fprintln(f, "================================================================================================")
 }
 
 // getClient uses a Context and Config to retrieve a Token
@@ -246,7 +356,7 @@ func checkChannels() {
 // блокувати надовго роботу з основним списком, в якій можуть додати, або видалити канал
 // Плейлисти помічені на видалення ігноруються
 func getRequestChannel() (map[string]*YoutubeChannel, map[string]*YoutubeChannel) {
-	requestChannel := make(map[string]*YoutubeChannel) // Канали з плейлистами
+	requestChannel := make(map[string]*YoutubeChannel)  // Канали з плейлистами
 	requestPlaylist := make(map[string]*YoutubeChannel) // Канали без плейлистів (ще не заповнениі з youtube)
 
 	// блокування потрібно щоб гарантовано не почати обробляти Channel якій видалений, чи деактивований
@@ -280,20 +390,32 @@ func checkVideos() {
 
 	// Якщо є канали з заповненими id плейлистів, на їх основі запрошуємо дані по відео
 	if len(requestChannel) > 0 {
-		for _, channel := range requestChannel {
-			go checkChannelVideosByPlayListId(channel)
+
+		if countRequestPlaylistItems >= *CountRequestPlaylistItems {
+			Logger.Info("from service youtube.seach")
+			countRequestPlaylistItems = 0
+			for _, channel := range requestChannel {
+				// Запрос відео через youtube.seach.list
+				go getVideosFromYoutubeSearch(channel)
+			}
+		} else {
+			Logger.Info("from service youtube.playlistitems")
+			for _, channel := range requestChannel {
+				// Запрос відео через youtube.playlistitems.list
+				go getVideosFromYoutubePlaylistItems(channel)
+			}
+			countRequestPlaylistItems++
 		}
 	}
 
 	Logger.Debug("check videos end")
 }
 
-
-// Перевіряємо список відео конкретного каналу, чи були додані нові, чи вичерпався термін збору 
-// статистики на старих. Для отримання списку відео викоритовується сервіс 
+// Перевіряємо список відео конкретного каналу, чи були додані нові, чи вичерпався термін збору
+// статистики на старих. Для отримання списку відео викоритовується сервіс
 // youtube.playlistitems.list
-func checkChannelVideosByPlayListId(channel *YoutubeChannel) {
-	Logger.Debugf("ch: %v, check video by PlaylistId start, count videos: %v", channel.Id, len(channel.Videos))
+func getVideosFromYoutubePlaylistItems(channel *YoutubeChannel) {
+	Logger.Debugf("ch: %v, request from youtube.playlistitems, count videos: %v", channel.Id, len(channel.Videos))
 
 	// перевіряємо плейлист на застарілs відео яке вже не потрібно обробляти
 	if len(channel.Videos) > 0 {
@@ -316,44 +438,13 @@ func checkChannelVideosByPlayListId(channel *YoutubeChannel) {
 
 		video, ok := channel.Videos[videoId]
 		if ok == false { // такого відео ще нема, пробуємо додати
-			addVideo(channel, videoId, item.Snippet.Title, item.Snippet.Description, 
+			addVideo(channel, videoId, item.Snippet.Title, item.Snippet.Description,
 				item.Snippet.PublishedAt, "")
-		} else {
-			isUpdate := false
-
-			// Чи не потрібно занести дані по тривалості відео (наприклад закінчився стрим і появився його запис)
-			if video.Duration == 0 {
-				videoDetails := getVideoDetails(channel.Id, videoId)
-				if videoDetails != nil {
-					if d, err := duration.Parse(videoDetails.Duration); err == nil {
-						video.Duration = d
-						isUpdate = true
-					} else {
-						Logger.Error("ch: %v, video: %v, error parse duration: %v",
-							channel.Id, videoId, videoDetails.Duration)
-					}
-				}
-			}
-
-			// Відео змінило опис?
-			if video.Title != item.Snippet.Title {
-				isUpdate = true
-				video.Title = item.Snippet.Title
-			}
-
-			if isUpdate {
-				err = UpdateVideoInDB(videoId, video)
-				if err != nil {
-					Logger.Error(err)
-					continue
-				}
-				Logger.Infof("ch: %v, video: %v, update(title: %v, duration: %v)",
-					channel.Id, videoId, video.Title, video.Duration)
-			}
-
+		} else { // перевіримо відео на зміни даних
+			checkUpdateVideo(channel.Id, videoId, item.Snippet.Title, "", video)
 		}
 	}
-	Logger.Infof("ch: %v, count videos: %v", channel.Id, len(channel.Videos))
+	Logger.Debugf("ch: %v, count videos: %v", channel.Id, len(channel.Videos))
 
 }
 
@@ -363,8 +454,8 @@ func checkChannelVideosByPlayListId(channel *YoutubeChannel) {
 // https://www.googleapis.com/youtube/v3/search?part=snippet%2Cid&channelId=UCRzL8jf39oEWyrPnjmhBa2w&maxResults=25
 // &order=date&publishedAfter=2019-01-30T19%3A08%3A26.000Z&type=video&key={YOUR_API_KEY}
 //
-func checkChannelVideos(channel *YoutubeChannel) {
-	Logger.Debugf("ch: %v, check video start, count videos: %v", channel.Id, len(channel.Videos))
+func getVideosFromYoutubeSearch(channel *YoutubeChannel) {
+	Logger.Debugf("ch: %v, request from youtube.search, count videos: %v", channel.Id, len(channel.Videos))
 
 	// перевіряємо плейлист на застарілі відео яке вже не потрібно обробляти
 	if len(channel.Videos) > 0 {
@@ -396,45 +487,50 @@ func checkChannelVideos(channel *YoutubeChannel) {
 
 		video, ok := channel.Videos[videoId]
 		if ok == false { // такого відео ще нема, пробуємо додати
-			addVideo(channel, videoId, item.Snippet.Title, item.Snippet.Description, 
-				item.Snippet.Description, item.Snippet.LiveBroadcastContent)
-		} else {
-			isUpdate := false
-
-			// Чи не потрібно занести дані по тривалості відео (наприклад закінчився стрим і появився його запис)
-			if item.Snippet.LiveBroadcastContent != LIVE_BROADCAST_CONTENT && video.Duration == 0 {
-				videoDetails := getVideoDetails(channel.Id, videoId)
-				if videoDetails != nil {
-					if d, err := duration.Parse(videoDetails.Duration); err == nil {
-						video.Duration = d
-						isUpdate = true
-					} else {
-						Logger.Error("ch: %v, video: %v, error parse duration: %v",
-							channel.Id, videoId, videoDetails.Duration)
-					}
-				}
-			}
-
-			// Відео змінило опис
-			newTitle := html.UnescapeString(item.Snippet.Title)
-			if video.Title != newTitle {
-				isUpdate = true
-				video.Title = newTitle
-			}
-
-			if isUpdate {
-				err = UpdateVideoInDB(videoId, video)
-				if err != nil {
-					Logger.Error(err)
-					continue
-				}
-				Logger.Infof("ch: %v, video: %v, update -> title: %v, duration: %v",
-					channel.Id, videoId, video.Title, video.Duration)
-			}
-
+			addVideo(channel, videoId, item.Snippet.Title, item.Snippet.Description,
+				item.Snippet.PublishedAt, item.Snippet.LiveBroadcastContent)
+		} else { // перевіримо відео на зміни даних
+			checkUpdateVideo(channel.Id, videoId, html.UnescapeString(item.Snippet.Title),
+				item.Snippet.LiveBroadcastContent, video)
 		}
 	}
-	Logger.Infof("ch: %v, count videos: %v", channel.Id, len(channel.Videos))
+	Logger.Debugf("ch: %v, count videos: %v", channel.Id, len(channel.Videos))
+}
+
+// Перевірити деталі відео, та при необхідності виправити
+func checkUpdateVideo(chId, videoId, title, alive string, video *YoutubeVideo) {
+	isUpdate := false
+
+	// Чи не потрібно занести дані по тривалості відео (наприклад закінчився стрим і появився його запис)
+	if alive != LIVE_BROADCAST_CONTENT && video.Duration == 0 {
+		videoDetails := getVideoDetails(chId, videoId)
+		if videoDetails != nil {
+			if d, err := duration.Parse(videoDetails.Duration); err == nil {
+				video.Duration = d
+				isUpdate = true
+			} else {
+				Logger.Error("ch: %v, video: %v, error parse duration: %v",
+					chId, videoId, videoDetails.Duration)
+			}
+		}
+	}
+
+	// Відео змінило опис
+	if video.Title != title {
+		video.Title = title
+		isUpdate = true
+	}
+
+	if isUpdate {
+		err := UpdateVideoInDB(videoId, video)
+		if err != nil {
+			Logger.Error(err)
+			return
+		}
+		Logger.Infof("ch: %v, video: %v, update -> title: %v, duration: %v",
+			chId, videoId, video.Title, video.Duration)
+	}
+
 }
 
 // Перевіряє чи не настав час (задається через PeriodСollection) припинити обробку якихось відео
@@ -466,6 +562,7 @@ func checkElapsedVideos(channel *YoutubeChannel) {
 		countDeleted)
 }
 
+// Отримати детальні дані по відео
 func getVideoDetails(channelId, videoId string) *youtube.VideoContentDetails {
 	call := service.Videos.List(VIDEOS_LIST_PART_DETAILS)
 	call = call.Id(videoId)
@@ -525,7 +622,7 @@ func addVideo(channel *YoutubeChannel, videoId, title, description, publishedAt,
 	channel.Mux.Lock()
 	defer channel.Mux.Unlock()
 	channel.Append(videoId, &YoutubeVideo{PublishedAt: timePublishedAt, Title: title, Deleted: false})
-	Logger.Infof("ch: %v, video: %v, add new at: %v, title: %v, alive: %v", channelId, videoId, timePublishedAt, title, alive)
+	Logger.Infof("ch: %v, video: %v, add new at: %v, title: %v, stream: %v", channelId, videoId, timePublishedAt, title, alive)
 }
 
 func getMeters() {
@@ -547,7 +644,7 @@ func getMetersVideos(channels *YoutubeChannel) {
 			getMetersVideosInd(channels.Id, mRrequestVideos[i])
 		}
 	} else {
-		Logger.Infof("ch: %v, SKIP - count videos 0", channels.Id)
+		Logger.Infof("ch: %v, skip - count videos 0", channels.Id)
 		return
 	}
 }
@@ -680,16 +777,16 @@ func fillPlaylistFromYoutube(channels map[string]*YoutubeChannel) {
 
 	for i := 0; i < len(mIds); i++ {
 		items := getPlailistIDsFromYoutube(mIds[i].String())
-		for _, item :=  range items {
+		for _, item := range items {
 			Logger.Debugf("get item %v", item)
 
 			channelId := item.Id
 			channel, ok := channels[channelId]
 			if ok {
-				channel.Idpl = item.ContentDetails.RelatedPlaylists.Uploads 
+				channel.Idpl = item.ContentDetails.RelatedPlaylists.Uploads
 				Logger.Infof("ch: %v, set pl: %v", channelId, channel.Idpl)
 			} else {
-				Logger.Errorf("ch: %v, error set pl: %v", channelId, channel.Idpl)				
+				Logger.Errorf("ch: %v, error set pl: %v", channelId, channel.Idpl)
 			}
 		}
 	}
@@ -717,11 +814,11 @@ func getSliceIds(channels map[string]*YoutubeChannel) []*bytes.Buffer {
 			bIds.WriteString(",")
 		}
 		bIds.WriteString(key)
-		
+
 		count++
 	}
-	
-	return mIds	
+
+	return mIds
 }
 
 func getPlailistIDsFromYoutube(ids string) []*youtube.Channel {
