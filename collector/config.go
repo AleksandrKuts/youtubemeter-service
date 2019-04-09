@@ -103,7 +103,7 @@ func init() {
 	defer logger.Sync() // flushes buffer, if any
 	Logger = logger.Sugar()	
 	
-	Logger.Warnf("debug level: %v", atomicLevel)
+	Logger.Debugf("debug level: %v", atomicLevel)
 	Logger.Debugf("Log: %v", *Log)
 	Logger.Debugf("LogError: %v", *LogError)
 	Logger.Debugf("LogTimeFormat: %v", *LogTimeFormat)

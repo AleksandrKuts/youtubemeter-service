@@ -55,7 +55,7 @@ func init() {
 		Logger.Fatalf("error ping database: %v", err)
 	}
 
-	Logger.Infof("open database with %v open connections", db.Stats().OpenConnections)
+	Logger.Debugf("open database with %v open connections", db.Stats().OpenConnections)
 }
 
 func closeDB() {

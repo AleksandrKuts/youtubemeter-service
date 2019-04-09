@@ -289,6 +289,7 @@ func initChannels() {
 		Logger.Errorf("Error get channels from DB: ", err)
 	}
 	Logger.Debugf("channels from DB: %v", channelsFromDB)
+	Logger.Infof("Init, load %v channels from database", len(channelsFromDB.Channels))
 
 	if len(channelsFromDB.Channels) > 0 {
 		channels = channelsFromDB
