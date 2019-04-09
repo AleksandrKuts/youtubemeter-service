@@ -84,7 +84,7 @@ func StartService(versionMajor, versionMin string) {
 
 	// Другий прохід заповнюємо данні по відео
 	// використовуємо youtube.seach
-	//	countRequestPlaylistItems = *CountRequestPlaylistItems
+	countRequestPlaylistItems = *CountRequestPlaylistItems
 	Logger.Info("Second check videos")
 	checkVideos()
 	time.Sleep(10 * time.Second)
@@ -110,7 +110,7 @@ func StartService(versionMajor, versionMin string) {
 			go checkChannels()
 		case <-timerVideo: // старт перевірки списку відео в каналі
 			go checkVideos()
-		case <-timerMeter: // старт перевірки метрик відео 
+		case <-timerMeter: // старт перевірки метрик відео
 			go getMeters()
 		case s := <-quit:
 			switch s {
@@ -182,7 +182,7 @@ func printStatus() {
 	fmt.Fprintf(f, "GCSys: \t\t%v\n", m.GCSys)
 	fmt.Fprintf(f, "OtherSys: \t%v\n", m.OtherSys)
 	fmt.Fprintf(f, "NextGC: \t%v\n", m.NextGC)
-	fmt.Fprintf(f, "LastGC: \t%v\n", m.LastGC)
+	fmt.Fprintf(f, "LastGC: \t%v\n", time.Unix(0, int64(m.LastGC)))
 	fmt.Fprintf(f, "PauseTotalNs: \t%v\n", m.PauseTotalNs)
 	fmt.Fprintf(f, "NumGC: \t%v\n", m.NumGC)
 	fmt.Fprintf(f, "NumForcedGC: \t%v\n", m.NumForcedGC)
@@ -299,7 +299,7 @@ func initChannels() {
 
 // Перевіряємо список каналів, чи додав адміністратор нові, чи видалив, чи деактивував, та корегуємо
 func checkChannels() {
-	Logger.Debug("check channel")
+	Logger.Infof("check channels")
 
 	// Отримуємо перечень діючих Channel-ів з БД на даний час
 	ids, err := GetChannelsIDsFromDB()
@@ -378,12 +378,13 @@ func getRequestChannel() (map[string]*YoutubeChannel, map[string]*YoutubeChannel
 func checkVideos() {
 	Logger.Debug("check videos start")
 
-	requestChannel, requestPlaylist := getRequestChannel() // отримуємо список активних каналів 
+	requestChannel, requestPlaylist := getRequestChannel() // отримуємо список активних каналів
 	Logger.Debugf("request channels: %v", requestChannel)
 
 	// Якщо є канали з незаповненими id плейлистів, запрошуємо ці дані з сервісу youtube. Отримувати дані
 	// по відео ми ще не взмозі, потрібен id плейлиста
 	if len(requestPlaylist) > 0 {
+		Logger.Info("get playlists from service youtube.channels.list")
 		go fillPlaylistFromYoutube(requestPlaylist)
 	}
 
@@ -393,14 +394,14 @@ func checkVideos() {
 		// Дані по відео запрошуються по черзі або з сервісу youtube.playlistitems, або з сервісу youtube.seach
 		// Чому так зроблено дивись опис countRequestPlaylistItems в collector.ini
 		if countRequestPlaylistItems >= *CountRequestPlaylistItems { // Запрос відео через youtube.seach
-			Logger.Info("from service youtube.seach")
+			Logger.Info("get videos from service youtube.seach.list")
 			countRequestPlaylistItems = 0
-			for _, channel := range requestChannel {				
+			for _, channel := range requestChannel {
 				go getVideosFromYoutubeSearch(channel)
 			}
 		} else { // Запрос відео через youtube.playlistitems
-			Logger.Info("from service youtube.playlistitems")
-			for _, channel := range requestChannel {				
+			Logger.Info("get videos from service youtube.playlistitems.list")
+			for _, channel := range requestChannel {
 				go getVideosFromYoutubePlaylistItems(channel)
 			}
 			countRequestPlaylistItems++
@@ -623,14 +624,14 @@ func addVideo(channel *YoutubeChannel, videoId, title, description, publishedAt,
 	channel.Mux.Lock()
 	defer channel.Mux.Unlock()
 
-	// додаємо відео в поточний канал 
+	// додаємо відео в поточний канал
 	channel.Append(videoId, &YoutubeVideo{PublishedAt: timePublishedAt, Title: title, Deleted: false})
 	Logger.Infof("ch: %v, video: %v, add new at: %v, title: %v, stream: %v", channelId, videoId, timePublishedAt, title, alive)
 }
 
 // Отримуємо метрики відео всіх активних каналів
 func getMeters() {
-	Logger.Debug("check meters start")
+	Logger.Info("get meters from service youtube.videos.list")
 
 	requestChannel, _ := getRequestChannel() // отримуємо список каналів для запросів
 	Logger.Debugf("check meters, count request channels: %v", len(requestChannel))
